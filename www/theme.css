@@ -275,3 +275,27 @@ body::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: 
 /* Pie de página */
 .pie-derechos { text-align: center; color: var(--mut); font-size: .8rem; padding: 18px 0 6px; letter-spacing: .02em; }
 .pie-derechos b { color: var(--txt); font-family: var(--titulo); letter-spacing: .06em; font-size: .95rem; }
+
+/* ---------- Pupilas: ojos que cambian en vivo ---------- */
+.ojo-panel { border-radius: 18px; padding: 12px; background: linear-gradient(160deg, #15306b, #0c1a3f); border: 1px solid rgba(150, 175, 255, .25); box-shadow: 0 10px 26px rgba(0, 0, 0, .35); position: relative; overflow: hidden; }
+.ojo-panel::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; background: linear-gradient(90deg, var(--rojo), #3b6bff); }
+.ojo-titulo { display: flex; justify-content: space-between; align-items: center; font-family: var(--titulo); font-size: 1.15rem; text-transform: uppercase; letter-spacing: .06em; color: #fff; margin-bottom: 6px; }
+.ojo-titulo .bi-eye-fill { color: #5b8cff; }
+.ojo-luz { border: 1.5px solid rgba(255, 213, 79, .6); background: rgba(255, 213, 79, .12); color: #ffd54f; border-radius: 10px; padding: 4px 10px; font: 700 .8rem system-ui, sans-serif; }
+.ojo-par { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ojo-fig { margin: 0; text-align: center; min-width: 0; }
+.ojo-svg { width: 100%; max-width: 180px; height: auto; display: block; margin: 0 auto; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .45)); }
+.ojo-fig figcaption { font: 700 .72rem system-ui, sans-serif; text-transform: uppercase; letter-spacing: .06em; color: var(--mut); margin-top: 2px; }
+.ojo-sin .ojo-svg { opacity: .55; filter: grayscale(.5) drop-shadow(0 6px 10px rgba(0, 0, 0, .45)); }
+.ojo-luz-on .ojo-svg { filter: brightness(1.25) drop-shadow(0 0 16px rgba(255, 235, 150, .75)); }
+.ojo-estado { text-align: center; font-family: var(--titulo); font-size: 1.15rem; letter-spacing: .04em; text-transform: uppercase; color: #fff; background: rgba(5, 12, 36, .55); border: 1px solid var(--linea); border-radius: 10px; padding: 5px 8px; margin: 6px 0; }
+.ojo-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.ojo-chips button { flex: 1 1 auto; border: 1.5px solid rgba(160, 185, 255, .35); background: rgba(255, 255, 255, .05); color: #fff; border-radius: 999px; padding: 6px 10px; font: 700 .85rem system-ui, sans-serif; }
+.ojo-chips button.activa { background: linear-gradient(180deg, #ff3045, #c9101f); border-color: transparent; box-shadow: 0 4px 12px rgba(227, 25, 43, .4); }
+.ojo-reac button.activa { background: linear-gradient(180deg, #2fd16a, #158a42); box-shadow: 0 4px 12px rgba(34, 197, 94, .35); }
+.ojo-reac button[data-reac="Arreactivas"].activa { background: linear-gradient(180deg, #ff3045, #c9101f); }
+.ojo-reac button[data-reac="Lentas"].activa { background: linear-gradient(180deg, #ffc933, #d99a00); color: #201600; }
+.ojo-sliders { display: grid; gap: 4px; margin: 4px 0; }
+.ojo-sliders label { display: grid; grid-template-columns: 28px 1fr 56px; align-items: center; gap: 8px; font-weight: 700; color: #c9d6f7; }
+.ojo-sliders input[type="range"] { width: 100%; accent-color: #ff4457; }
+.ojo-sliders b { text-align: right; font-family: ui-monospace, Menlo, monospace; font-size: .85rem; color: #fff; }

@@ -342,7 +342,10 @@
         // III. Evaluación clínica
         L.seccion('III. Evaluación Clínica y SAMPLER', '#cc0000', A4, [
             [l('Vía aérea / Vent.'), v(V(evalViaAerea) + ' | ' + V(evalVent)), l('Glasgow (GCS)'), v(B(textoGcs))],
-            [l('Pulsos / Piel'), v(V(evalPulsos) + ' | ' + V(evalPiel)), l('Pupilas / Ausc.'), v(V(g('eval_pupilas', '-')) + ' | ' + V(g('eval_auscultacion', '-')))],
+            [l('Pulsos / Piel'), v(V(evalPulsos) + ' | ' + V(evalPiel)),
+                ...(ne('pupila_od') && ne('pupila_oi') ? [l('Auscultación'), v(V(g('eval_auscultacion', '-')))] : [l('Pupilas / Ausc.'), v(V(g('eval_pupilas', '-')) + ' | ' + V(g('eval_auscultacion', '-')))])],
+            ...(ne('pupila_od') && ne('pupila_oi') ? [[l('Pupilas'), v(B('OD: ') + V(ne('pupila_od')) + ' mm  |  ' + B('OI: ') + V(ne('pupila_oi')) + ' mm  |  ' + B('Reacción a la luz: ') + V(g('pupila_reactividad', '') || 'No valorada') +
+                (ne('eval_pupilas') ? '  |  ' + V(g('eval_pupilas')) : ''), { span: 3 })]] : []),
             [l('SAMPLER'), v(B('S: ') + V(g('sampler_signos', '-')) + '  ' + B('A: ') + V(g('sampler_alergias', '-')) + '  ' + B('M: ') + V(g('sampler_medicamentos', '-')) + '  ' + B('P: ') + V(g('sampler_padecimientos', '-')) +
                 '\n' + B('L: ') + V(g('sampler_ultima_comida', '-')) + '  ' + B('E: ') + V(g('sampler_eventos', '-')) + '  ' + B('R: ') + V(g('sampler_riesgos', '-')), { span: 3 })],
             [l('Dolor (ALICIA)'), v(B('Aparición: ') + V(g('dolor_aparicion', '-')) + ' | ' + B('Localiz: ') + V(g('dolor_localizacion', '-')) + ' | ' + B('Irradiac: ') + V(g('dolor_irradiacion', '-')) +

@@ -4,11 +4,11 @@
 // Estrategia: "guardar al instante, actualizar en segundo plano". La app abre
 // siempre desde lo guardado (funciona sin internet) y, si hay red, baja la
 // versión nueva para la próxima vez. Sube VERSION cuando publiques cambios.
-const VERSION = 'frap-local-v3';
+const VERSION = 'frap-local-v4';
 const PRECACHE = [
   './', 'index.html', 'login.html', 'dashboard.html', 'frap.html', 'servicio.html',
   'checklist.html', 'perfil.html', 'ajustes.html', 'historial.html', 'calculadoras.html',
-  'app-config.js', 'local-core.js', 'theme.css', 'gps-ubicacion.js', 'frap-pdf.js', 'offline-sync.js', 'manifest.json',
+  'app-config.js', 'local-core.js', 'theme.css', 'gps-ubicacion.js', 'ojos-pupilas.js', 'frap-pdf.js', 'offline-sync.js', 'manifest.json',
   'icon-192.png', 'icon-512.png', 'silueta.png',
   'vendor/bootstrap.min.css', 'vendor/bootstrap.bundle.min.js', 'vendor/bootstrap-icons.css',
   'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css', 'vendor/fonts/barlow-condensed-latin-600-normal.woff2', 'vendor/fonts/barlow-condensed-latin-700-normal.woff2', 'vendor/fonts/barlow-condensed-latin-800-normal.woff2',

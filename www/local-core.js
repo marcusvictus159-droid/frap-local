@@ -509,6 +509,7 @@
                 tipo: 'doc', blob: pdf, nombre: folio + '.pdf', frap: folio,
                 caption: '🚨 ' + b('FRAP REGISTRADA') + ' 🚨\n\n📄 ' + b('Folio:') + ' ' + esc(folio) + '\n🚑 ' + b('Jefe de Servicio:') + ' ' + esc(p.nombre) +
                     '\n👤 ' + b('Paciente:') + ' ' + esc(d.nombre_paciente || 'No identificado') + '\n⚖️ ' + b('Dictamen:') + ' ' + esc(d.resolucion_final || '') +
+                    (d.eval_pupilas ? '\n👁 ' + b('Pupilas:') + ' ' + esc(d.eval_pupilas) : '') +
                     (d.servicio_lat && d.servicio_lng ? '\n📍 ' + b('Ubicación:') + ' ' + esc(d.servicio_lat + ', ' + d.servicio_lng) + (d.servicio_precision ? ' (±' + esc(d.servicio_precision) + ' m)' : '') +
                         '\nhttps://www.google.com/maps?q=' + encodeURIComponent(d.servicio_lat + ',' + d.servicio_lng) : '')
             });

@@ -71,6 +71,7 @@
 <link rel="stylesheet" href="theme.css">
 <script src="vendor/leaflet/leaflet.js"></script>
 <script src="gps-ubicacion.js"></script>
+<script src="ojos-pupilas.js"></script>
 </head>
 <body>
 
@@ -358,8 +359,36 @@
                 
                 <h6 class="fw-bold text-cruz">Evaluación Secundaria</h6>
                 <div class="row g-2 mb-3">
-                    <div class="col-6"><small class="text-muted">Pupilas</small><input type="text" class="form-control form-control-sm" name="eval_pupilas" placeholder="Isocóricas, midriáticas..."></div>
-                    <div class="col-6"><small class="text-muted">Auscultación extra</small><input type="text" class="form-control form-control-sm" name="eval_auscultacion" placeholder="Murmullo, sibilancias..."></div>
+                    <div class="col-12">
+                        <div class="ojo-panel ojo-sin" id="ojoPanel">
+                            <div class="ojo-titulo"><span><i class="bi bi-eye-fill"></i> Pupilas</span><button type="button" class="ojo-luz"><i class="bi bi-lightbulb-fill"></i> Probar luz</button></div>
+                            <div class="ojo-par">
+                                <figure class="ojo-fig"><div class="ojo-od"></div><figcaption>Ojo derecho · OD</figcaption></figure>
+                                <figure class="ojo-fig"><div class="ojo-oi"></div><figcaption>Ojo izquierdo · OI</figcaption></figure>
+                            </div>
+                            <div class="ojo-estado" hidden></div>
+                            <div class="ojo-chips" role="group" aria-label="Estado de las pupilas">
+                                <button type="button" data-preset="miosis">Mióticas</button>
+                                <button type="button" data-preset="normal">Normales</button>
+                                <button type="button" data-preset="midriasis">Midriáticas</button>
+                                <button type="button" data-preset="aniso">Anisocóricas</button>
+                            </div>
+                            <div class="ojo-sliders">
+                                <label for="ojoSlOD"><span>OD</span><input type="range" id="ojoSlOD" min="1" max="9" step="0.5" value="4"><b id="ojoValOD">4 mm</b></label>
+                                <label for="ojoSlOI"><span>OI</span><input type="range" id="ojoSlOI" min="1" max="9" step="0.5" value="4"><b id="ojoValOI">4 mm</b></label>
+                            </div>
+                            <div class="ojo-chips ojo-reac" role="group" aria-label="Reacción a la luz">
+                                <button type="button" data-reac="Reactivas">Reactivas</button>
+                                <button type="button" data-reac="Lentas">Lentas</button>
+                                <button type="button" data-reac="Arreactivas">Arreactivas</button>
+                            </div>
+                            <input type="hidden" name="pupila_od" id="pupila_od" value="">
+                            <input type="hidden" name="pupila_oi" id="pupila_oi" value="">
+                            <input type="hidden" name="pupila_reactividad" id="pupila_reactividad" value="">
+                            <input type="text" class="form-control form-control-sm mt-2" name="eval_pupilas" placeholder="Resumen (se llena solo, puedes editarlo)">
+                        </div>
+                    </div>
+                    <div class="col-12"><small class="text-muted">Auscultación extra</small><input type="text" class="form-control form-control-sm" name="eval_auscultacion" placeholder="Murmullo, sibilancias..."></div>
                     <div class="col-12"><small class="text-muted">Monitoreo ECG</small><input type="text" class="form-control form-control-sm" name="eval_ecg" placeholder="Sinusal, Asistolia, Fibrilación..."></div>
                 </div>
 
@@ -1109,7 +1138,7 @@
         if (borradorGuardado) {
             if (confirm('Tienes un FRAP guardado como borrador (pausado).\n\n¿Deseas cargarlo para poner tu hora de base y terminarlo?')) {
                 cargarBorradorConfirmado = true;
-                cargarBorrador(JSON.parse(borradorGuardado)); pintarSemaforo();
+                cargarBorrador(JSON.parse(borradorGuardado)); pintarSemaforo(); OjosPupilas.repintar();
             } else {
                 localStorage.removeItem('frap_borrador');
             }
@@ -1511,6 +1540,7 @@
     }
 </script>
 <script>
+OjosPupilas.montar(document.getElementById('ojoPanel'));
 // Semáforos (prioridad inicial y triage final): un toque elige el color; tocar el mismo lo quita.
 function pintarSemaforo() {
     document.querySelectorAll('.semaforo').forEach(function (g) {
