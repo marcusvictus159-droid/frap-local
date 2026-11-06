@@ -64,7 +64,7 @@ jobs:
           else
             PASS=$(openssl rand -hex 16)
             keytool -genkeypair -keystore frap.keystore -alias frap -keyalg RSA -keysize 2048 -validity 10000 \
-              -storepass "$PASS" -keypass "$PASS" -dname "CN=FRAP Digital, O=Cruz Roja Mexicana Huatulco, C=MX"
+              -storepass "$PASS" -keypass "$PASS" -dname "CN=FRAP Digital, C=MX"
             echo "pass=$PASS" >> "$GITHUB_OUTPUT"; echo "alias=frap" >> "$GITHUB_OUTPUT"
             echo "nueva=si" >> "$GITHUB_OUTPUT"
             mkdir -p llave

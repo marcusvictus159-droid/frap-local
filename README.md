@@ -1,6 +1,6 @@
 # FRAP Digital — versión local (sin servidor)
 
-App de registro de atención prehospitalaria de Cruz Roja Mexicana Huatulco.
+App de registro de atención prehospitalaria (FRAP Digital) para cualquier institución.
 **Ya no necesita dominio, hosting ni base de datos**: todo se guarda en el teléfono y los registros se envían a un grupo de Telegram.
 
 ## Qué hace ahora

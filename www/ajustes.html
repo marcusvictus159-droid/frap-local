@@ -68,6 +68,20 @@
             <div id="msgTg" class="alert py-2 small mt-3 mb-0" style="display:none;"></div>
         </div>
 
+        <!-- INSTITUCIÓN -->
+        <div class="card-section">
+            <h6 class="fw-bold text-uppercase text-muted small mb-3"><i class="bi bi-building me-1"></i> Institución</h6>
+            <p class="small text-muted">Aparece en el encabezado del PDF de cada FRAP. Es opcional.</p>
+            <label class="form-label small fw-bold" for="instNombre">Nombre</label>
+            <input type="text" class="form-control mb-2" id="instNombre" maxlength="60" placeholder="Ej. Protección Civil Municipal">
+            <label class="form-label small fw-bold" for="instSub">Base o delegación</label>
+            <input type="text" class="form-control mb-2" id="instSub" maxlength="60" placeholder="Ej. Base Centro">
+            <label class="form-label small fw-bold" for="instLogo">Logo (imagen)</label>
+            <input type="file" class="form-control mb-2" id="instLogo" accept="image/png,image/jpeg">
+            <div id="instPrev" class="mb-2" style="display:none;"><img id="instImg" alt="Logo" style="max-height:60px;max-width:100%;border-radius:8px;background:#fff;padding:4px;"> <button type="button" id="instQuitar" class="btn btn-link btn-sm text-danger">Quitar logo</button></div>
+            <button type="button" id="btnInst" class="btn btn-cruz w-100">Guardar institución</button>
+        </div>
+
         <!-- BANDEJA -->
         <div class="card-section">
             <h6 class="fw-bold text-uppercase text-muted small mb-3"><i class="bi bi-inbox me-1"></i> Envíos pendientes</h6>
@@ -194,6 +208,33 @@
             pintarTelegram();
             pintarPendientes();
         })();
-    </script>
+    
+        // ---- Institución (nombre, base y logo para el PDF) ----
+        (function () {
+            let logo = '';
+            try {
+                const i = JSON.parse(localStorage.getItem('institucion') || 'null') || {};
+                $('instNombre').value = i.nombre || ''; $('instSub').value = i.sub || ''; logo = i.logo || '';
+            } catch (e) {}
+            function pintarLogo() { $('instPrev').style.display = logo ? 'block' : 'none'; if (logo) $('instImg').src = logo; }
+            pintarLogo();
+            $('instLogo').addEventListener('change', (e) => {
+                const f = e.target.files[0]; if (!f) return;
+                const img = new Image();
+                img.onload = () => {
+                    const k = Math.min(1, 400 / img.height);
+                    const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+                    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                    logo = c.toDataURL('image/png'); pintarLogo(); URL.revokeObjectURL(img.src);
+                };
+                img.src = URL.createObjectURL(f);
+            });
+            $('instQuitar').addEventListener('click', () => { logo = ''; $('instLogo').value = ''; pintarLogo(); });
+            $('btnInst').addEventListener('click', () => {
+                localStorage.setItem('institucion', JSON.stringify({ nombre: $('instNombre').value.trim(), sub: $('instSub').value.trim(), logo }));
+                const b = $('btnInst'); const t = b.textContent; b.textContent = 'Guardado'; setTimeout(() => { b.textContent = t; }, 1500);
+            });
+        })();
+</script>
 </body>
 </html>

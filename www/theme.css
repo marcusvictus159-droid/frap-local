@@ -1,4 +1,4 @@
-/* theme.css — aspecto moderno de FRAP Digital: azul marino profundo, rojo Cruz Roja,
+/* theme.css — aspecto moderno de FRAP Digital: azul marino profundo, rojo de emergencias,
    tipografía condensada en mayúsculas. Se carga al final de cada página y reemplaza
    los colores claros de Bootstrap (las páginas llevan data-bs-theme="dark"). */
 
@@ -129,7 +129,7 @@ hr { border-color: var(--linea); opacity: 1; }
 label.form-label, .form-label { color: #c9d6f7; font-size: .95rem; text-transform: uppercase; letter-spacing: .04em; font-weight: 700; }
 .form-check-input { background-color: var(--campo); border-color: rgba(160, 185, 255, .45); }
 .form-check-input:checked { background-color: var(--rojo); border-color: var(--rojo); }
-.form-select { background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important; background-repeat: no-repeat !important; background-position: right .85rem center !important; background-size: 16px 12px !important; padding-right: 2.5rem !important; }
+.form-select { background-repeat: no-repeat !important; background-position: right .85rem center !important; background-size: 16px 12px !important; padding-right: 2.4rem !important; background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important; background-repeat: no-repeat !important; background-position: right .85rem center !important; background-size: 16px 12px !important; padding-right: 2.5rem !important; }
 .radio-legal:checked + label { background: linear-gradient(180deg, #ff3045, #c9101f) !important; }
 .btn-check + .btn { background: rgba(255, 255, 255, .05); }
 .btn-check:checked + .btn { background: linear-gradient(180deg, #ff3045, #c9101f) !important; color: #fff !important; border-color: transparent !important; }
@@ -229,3 +229,12 @@ textarea { font-family: ui-monospace, Menlo, monospace; }
 /* grupos de campo con ícono */
 .input-group-text { background: var(--campo) !important; color: var(--mut) !important; border: 1.5px solid var(--linea) !important; border-radius: 12px 0 0 12px !important; }
 .input-group > .form-control:not(:first-child) { border-radius: 0 12px 12px 0 !important; margin-left: -1px; }
+
+/* Cajas claras puestas en línea (signos vitales, etc.) */
+[style*="background: #e"], [style*="background:#e"], [style*="background: #d"], [style*="background:#d"],
+[style*="background-color: #e"], [style*="background-color:#e"], [style*="background-color: #f"], [style*="background-color:#f"] {
+    background: rgba(255, 255, 255, .06) !important;
+    border-color: var(--linea) !important;
+    color: var(--txt) !important;
+}
+.signo-fila.bg-white { background: rgba(5, 12, 36, .45) !important; }

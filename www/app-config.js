@@ -75,3 +75,7 @@ if ('serviceWorker' in navigator && !window.Capacitor) {
         navigator.serviceWorker.register('sw.js').catch(err => console.log('Error SW:', err));
     });
 }
+
+// Pide al navegador que NO borre los datos guardados (FRAP, guardias, checklists, servicios).
+// Importante sobre todo en iPhone y Safari, que pueden limpiar el almacenamiento si no se usa la app.
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* sin soporte */ }

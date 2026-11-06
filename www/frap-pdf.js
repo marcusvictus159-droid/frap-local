@@ -225,11 +225,18 @@
             return dataUrl.indexOf('image/jpeg') !== -1 ? await pdf.embedJpg(bytes) : await pdf.embedPng(bytes);
         } catch (e) { console.warn('[pdf] imagen ignorada', e); return null; }
     }
-    async function cargarLogo(pdf) {
+    // Datos de la institución (los captura cada usuario en Ajustes; el logo es opcional).
+    function leerInstitucion() {
+        try { return Object.assign({ nombre: '', sub: '', logo: '' }, JSON.parse(localStorage.getItem('institucion') || 'null') || {}); }
+        catch (e) { return { nombre: '', sub: '', logo: '' }; }
+    }
+    async function cargarLogo(pdf, inst) {
         try {
-            const r = await fetch('logo_cruz_roja.png');
-            if (!r.ok) return null;
-            return await pdf.embedPng(new Uint8Array(await r.arrayBuffer()));
+            if (!inst.logo) return null;
+            const bin = atob(inst.logo.split('base64,')[1]);
+            const bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            return inst.logo.indexOf('image/jpeg') !== -1 ? await pdf.embedJpg(bytes) : await pdf.embedPng(bytes);
         } catch (e) { return null; }
     }
 
@@ -237,6 +244,7 @@
         const perfil = (ctx && ctx.perfil) || { nombre: '' };
         const fecha = (ctx && ctx.fecha) || new Date();
 
+        const inst = leerInstitucion();
         // Helpers que imitan $_POST['x'] ?? 'valor'
         const g = (k, def) => (d[k] === undefined || d[k] === null) ? (def === undefined ? '' : def) : d[k];
         const ne = (k) => { const v = d[k]; return (v !== undefined && v !== null && v !== '' && v !== '0' && v !== 0) ? v : null; };
@@ -275,7 +283,7 @@
         const pdf = await PDFDocument.create();
         pdf.setTitle('FRAP ' + V(folio));
         pdf.setAuthor(V(paramedico));
-        pdf.setSubject('Registro de Atención Prehospitalaria - Cruz Roja Mexicana, Delegación Huatulco');
+        pdf.setSubject('Registro de Atención Prehospitalaria' + (inst.nombre ? ' - ' + V(inst.nombre) : ''));
         pdf.setProducer('FRAP Digital CRM (local)');
         pdf.setCreationDate(fecha);
         const fonts = {
@@ -284,7 +292,7 @@
             it: await pdf.embedFont(StandardFonts.HelveticaOblique)
         };
         const L = new Lienzo(pdf, fonts);
-        const logo = await cargarLogo(pdf);
+        const logo = await cargarLogo(pdf, inst);
         const imgMedico = await cargarPng(pdf, d.base64_firma_medico);
         const imgPaciente = await cargarPng(pdf, d.base64_firma_paciente);
         const imgParamedico = await cargarPng(pdf, d.base64_firma_paramedico);
@@ -296,12 +304,12 @@
             const k = 40 / logo.height;
             L.pag.drawImage(logo, { x: M, y: L.y - 40, width: logo.width * k, height: 40 });
         } else {
-            L.pag.drawText('CRUZ ROJA MEXICANA', { x: M, y: L.y - 24, size: 15, font: fonts.bold, color: C.rojo });
+            L.pag.drawText(V(inst.nombre || 'FRAP DIGITAL').toUpperCase(), { x: M, y: L.y - 24, size: 15, font: fonts.bold, color: C.rojo });
         }
         const tituloCab = 'REGISTRO DE ATENCIÓN PREHOSPITALARIA';
         L.pag.drawText(tituloCab, { x: PW - M - fonts.bold.widthOfTextAtSize(tituloCab, 13), y: L.y - 13, size: 13, font: fonts.bold, color: C.rojo });
-        const deleg = 'DELEGACIÓN HUATULCO';
-        L.pag.drawText(deleg, { x: PW - M - fonts.bold.widthOfTextAtSize(deleg, 8), y: L.y - 25, size: 8, font: fonts.bold, color: hex('#555555') });
+        const deleg = V(inst.sub || '').toUpperCase();
+        if (deleg) L.pag.drawText(deleg, { x: PW - M - fonts.bold.widthOfTextAtSize(deleg, 8), y: L.y - 25, size: 8, font: fonts.bold, color: hex('#555555') });
         const fTxt = V(folio), fEt = 'FOLIO: ';
         const wF = fonts.bold.widthOfTextAtSize(fTxt, 11), wE = fonts.bold.widthOfTextAtSize(fEt, 11);
         L.pag.drawText(fEt, { x: PW - M - wF - wE, y: L.y - 39, size: 11, font: fonts.bold, color: C.negro });
@@ -419,7 +427,7 @@
         const tipoCons = g('tipo_consentimiento', 'Consentimiento Informado');
         const textoLegal = tipoCons === 'Consentimiento Informado'
             ? 'DECLARO HABER RECIBIDO OPORTUNAMENTE INFORMACIÓN COMPLETA Y ADECUADA SOBRE MI CUADRO CLÍNICO Y LOS PROCEDIMIENTOS DIAGNÓSTICOS Y/O TERAPÉUTICOS. DECLARO MI CONSENTIMIENTO PARA SER SOMETIDO AL TRATAMIENTO.'
-            : 'DECLARO QUE NO ACEPTO LAS RECOMENDACIONES DEL PERSONAL DE LA AMBULANCIA EN CUANTO AL TRATAMIENTO Y/O TRASLADO. EXIMO A CRUZ ROJA MEXICANA DE TODA RESPONSABILIDAD.';
+            : 'DECLARO QUE NO ACEPTO LAS RECOMENDACIONES DEL PERSONAL DE LA AMBULANCIA EN CUANTO AL TRATAMIENTO Y/O TRASLADO. EXIMO A ' + (inst.nombre ? V(inst.nombre).toUpperCase() : 'LA INSTITUCIÓN') + ' DE TODA RESPONSABILIDAD.';
         const filasLegal = [[v('"' + textoLegal + '"', { it: true, size: 7.5, color: '#555555' })]];
         if (ne('autoridad_corporacion') || ne('autoridad_oficial') || ne('autoridad_unidad')) {
             filasLegal.push([v(B('Autoridad: ') + V(g('autoridad_corporacion')) + ' | ' + B('Oficial: ') + V(g('autoridad_oficial')) + ' | ' + B('Unidad: ') + V(g('autoridad_unidad')), { size: 7.5 })]);
