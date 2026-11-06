@@ -21,4 +21,17 @@ for (const [origen, nombre] of archivos) {
 // Las fuentes de los iconos van en vendor/fonts (el CSS las pide ahí).
 if (!existsSync('node_modules/bootstrap-icons/font/fonts')) { console.error('FALTAN las fuentes de bootstrap-icons'); process.exit(1); }
 cpSync('node_modules/bootstrap-icons/font/fonts', `${destino}/fonts`, { recursive: true });
+// Leaflet (mapa) y la tipografía condensada del tema.
+const leaf = 'node_modules/leaflet/dist';
+if (!existsSync(leaf + '/leaflet.js')) { console.error('FALTA leaflet'); process.exit(1); }
+mkdirSync(`${destino}/leaflet`, { recursive: true });
+copyFileSync(leaf + '/leaflet.js', `${destino}/leaflet/leaflet.js`);
+copyFileSync(leaf + '/leaflet.css', `${destino}/leaflet/leaflet.css`);
+cpSync(leaf + '/images', `${destino}/leaflet/images`, { recursive: true });
+for (const peso of [600, 700, 800]) {
+  const f = `barlow-condensed-latin-${peso}-normal.woff2`;
+  const o = `node_modules/@fontsource/barlow-condensed/files/${f}`;
+  if (!existsSync(o)) { console.error('FALTA ' + o); process.exit(1); }
+  copyFileSync(o, `${destino}/fonts/${f}`);
+}
 console.log('vendor listo en', destino);

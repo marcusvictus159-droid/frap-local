@@ -317,7 +317,8 @@
         // I. Servicio y tripulación
         L.seccion('I. Datos del Servicio y Tripulación', '#cc0000', A4, [
             [l('Fecha / Tipo'), v(formatearFecha(fecha) + ' | ' + B(g('tipo_servicio'))), l('Motivo atención'), v(V(g('motivo_atencion')) + ' (Pri: ' + V(g('prioridad_inicial')) + ')')],
-            [l('Ubicación'), v(V(g('servicio_esquina')) + ', Mun. ' + V(g('servicio_municipio')) + ' (' + V(g('servicio_lugar_ocurrencia')) + ')', { span: 3 })],
+            [l('Ubicación'), v(V(g('servicio_esquina')) + ', Mun. ' + V(g('servicio_municipio')) + ' (' + V(g('servicio_lugar_ocurrencia')) + ')' +
+                (ne('servicio_lat') && ne('servicio_lng') ? ' | ' + B('GPS: ') + V(ne('servicio_lat')) + ', ' + V(ne('servicio_lng')) + (ne('servicio_precision') ? ' (±' + V(ne('servicio_precision')) + ' m)' : '') : ''), { span: 3 })],
             [l('Tripulación'), v(B('Jefe: ') + V(paramedico) + ' | ' + B('Op: ') + V(g('tripulacion_operador')) + ' | ' + B('Aux: ') + V(g('tripulacion_auxiliares')), { span: 3 })],
             [l('Cronometría'), v('Llamada: ' + V(ne('hora_llamada') || '--:--') + ' | Salida: ' + V(ne('hora_salida') || '--:--') + ' | Llegada: ' + V(ne('hora_llegada') || '--:--') +
                 ' | Traslado: ' + V(ne('hora_traslado') || '--:--') + ' | Hosp: ' + V(ne('hora_hospital') || '--:--') + ' | ' + B('Base: ' + (ne('hora_base') || '--:--')), { span: 3 })]

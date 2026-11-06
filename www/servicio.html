@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-bs-theme="dark">
 <head>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -10,7 +10,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Salida a Servicio</title>
-    <meta name="theme-color" content="#cc0000">
+    <meta name="theme-color" content="#0b1533">
     <link href="vendor/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="vendor/bootstrap-icons.css">
     <style>
@@ -25,6 +25,10 @@
     <script src="app-config.js"></script>
     <script src="local-core.js"></script>
     <script src="offline-sync.js"></script>
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="theme.css">
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="gps-ubicacion.js"></script>
 </head>
 <body>
 
@@ -92,6 +96,7 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-bold small">Ubicación del servicio</label>
+                    <div id="gpsServicio"></div>
                     <input type="text" class="form-control" id="s_ubicacion" placeholder="Dirección o referencia">
                 </div>
                 <button type="button" id="btnGuardarSalida" class="btn w-100 fw-bold" style="background-color:var(--cruz-red); color:white; border-radius:10px; padding:12px;">
@@ -222,7 +227,7 @@
                 auxiliares: document.getElementById('s_auxiliares').value,
                 km_salida: document.getElementById('s_km').value,
                 combustible_salida: document.getElementById('s_combustible').value,
-                ubicacion_servicio: document.getElementById('s_ubicacion').value,
+                ubicacion_servicio: ubicacionConGps(),
                 local_servicio_ref: localRef
             };
 
@@ -260,5 +265,27 @@
 
         iniciar();
     </script>
+<script>
+var gpsDatos = null;
+(function () {
+    var campo = document.getElementById('s_ubicacion');
+    if (campo) campo.addEventListener('input', function (e) { if (e.isTrusted) campo.dataset.auto = '0'; });
+    GPSUbic.montar(document.getElementById('gpsServicio'), {
+        titulo: 'Coordenadas de salida',
+        onDatos: function (d) {
+            gpsDatos = d;
+            if (d.direccion && d.direccion.linea && campo && (!campo.value || campo.dataset.auto === '1')) {
+                campo.value = d.direccion.linea + (d.direccion.municipio ? ', ' + d.direccion.municipio : '');
+                campo.dataset.auto = '1';
+            }
+        }
+    });
+})();
+function ubicacionConGps() {
+    var t = (document.getElementById('s_ubicacion').value || '').trim();
+    if (!gpsDatos) return t;
+    return (t ? t + ' ' : '') + '(' + gpsDatos.lat.toFixed(6) + ', ' + gpsDatos.lng.toFixed(6) + ') ' + GPSUbic.enlaceMapa(gpsDatos.lat, gpsDatos.lng);
+}
+</script>
 </body>
 </html>

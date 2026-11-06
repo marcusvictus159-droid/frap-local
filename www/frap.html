@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-bs-theme="dark">
 <head>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -12,7 +12,7 @@
     <title>Captura de FRAP</title>
     
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#cc0000">
+    <meta name="theme-color" content="#0b1533">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="FRAP Digital">
@@ -67,6 +67,10 @@
 <script src="app-config.js"></script>
     <script src="local-core.js"></script>
 <script src="offline-sync.js"></script>
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="theme.css">
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="gps-ubicacion.js"></script>
 </head>
 <body>
 
@@ -125,6 +129,10 @@
 
                 <div class="mb-3">
                     <label class="form-label fw-bold">Ubicación del Servicio</label>
+                    <div id="gpsFrap"></div>
+                    <input type="hidden" name="servicio_lat" id="servicio_lat">
+                    <input type="hidden" name="servicio_lng" id="servicio_lng">
+                    <input type="hidden" name="servicio_precision" id="servicio_precision">
                     <input type="text" class="form-control form-control-sm mb-2" name="servicio_esquina" placeholder="Calle / Colonia / Esquina">
                     <div class="row g-2">
                         <div class="col-6"><input type="text" class="form-control form-control-sm" name="servicio_municipio" placeholder="Municipio"></div>
@@ -1504,6 +1512,32 @@
         localStorage.removeItem('dashboard_cache');
         window.location.href = 'login.html';
     }
+</script>
+<script>
+(function () {
+    // Botón de GPS: llena coordenadas y, si hay internet, la calle y el municipio (solo si están vacíos
+    // o si los puso el propio GPS; lo que escribas a mano no se pisa).
+    function rellenar(campo, valor) {
+        if (!campo || !valor) return;
+        if (!campo.value || campo.dataset.auto === '1') { campo.value = valor; campo.dataset.auto = '1'; campo.dispatchEvent(new Event('input', { bubbles: true })); }
+    }
+    ['servicio_esquina', 'servicio_municipio'].forEach(function (n) {
+        var c = document.querySelector('[name="' + n + '"]');
+        if (c) c.addEventListener('input', function (e) { if (e.isTrusted) c.dataset.auto = '0'; });
+    });
+    GPSUbic.montar(document.getElementById('gpsFrap'), {
+        titulo: 'Coordenadas del servicio',
+        onDatos: function (d) {
+            document.getElementById('servicio_lat').value = d.lat.toFixed(6);
+            document.getElementById('servicio_lng').value = d.lng.toFixed(6);
+            document.getElementById('servicio_precision').value = d.precision ? Math.round(d.precision) : '';
+            if (d.direccion) {
+                rellenar(document.querySelector('[name="servicio_esquina"]'), d.direccion.linea);
+                rellenar(document.querySelector('[name="servicio_municipio"]'), d.direccion.municipio);
+            }
+        }
+    });
+})();
 </script>
 </body>
 </html>
