@@ -58,7 +58,13 @@ jobs:
         run: |
           mkdir -p salida
           if [ -n "$KS_B64" ]; then
-            echo "$KS_B64" | base64 -d > frap.keystore
+            echo "$KS_B64" | tr -d '[:space:]' | base64 -d > frap.keystore
+            # Tolera espacios, saltos de línea o el texto "KEYSTORE_PASSWORD =" pegado por error
+            KS_PASS=$(printf '%s' "$KS_PASS" | sed -E 's/^[[:space:]]*KEYSTORE_PASSWORD[[:space:]]*=[[:space:]]*//' | tr -d '[:space:]')
+            KS_ALIAS=$(printf '%s' "${KS_ALIAS:-frap}" | sed -E 's/^[[:space:]]*KEY_ALIAS[[:space:]]*=[[:space:]]*//' | tr -d '[:space:]')
+            if ! keytool -list -keystore frap.keystore -storepass "$KS_PASS" >/dev/null 2>&1; then
+              echo "::error::La contraseña (KEYSTORE_PASSWORD) o el archivo (KEYSTORE_BASE64) de los secretos no coincide con la llave. Vuelve a crearlos copiando el texto exacto."; exit 1
+            fi
             echo "pass=$KS_PASS" >> "$GITHUB_OUTPUT"; echo "alias=${KS_ALIAS:-frap}" >> "$GITHUB_OUTPUT"
             echo "nueva=no" >> "$GITHUB_OUTPUT"
           else
