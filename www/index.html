@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FRAP Digital">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>FRAP Digital CRM</title>
+    <meta name="theme-color" content="#cc0000">
+    <style>
+        body {
+            background-color: #f4f6f9;
+            display: flex; align-items: center; justify-content: center;
+            height: 100vh; margin: 0;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 4px solid #eee; border-top: 4px solid #cc0000;
+            border-radius: 50%; animation: girar 0.8s linear infinite;
+        }
+        @keyframes girar { to { transform: rotate(360deg); } }
+    </style>
+<script src="app-config.js"></script>
+<script src="local-core.js"></script>
+</head>
+<body>
+    <div class="spinner"></div>
+    <script>
+        // Punto de entrada. Todo es local, así que no hay nada que esperar:
+        //  · sin perfil o sin sesión  -> login.html (crear perfil / continuar)
+        //  · con sesión               -> pantalla de inicio según el rol
+        const P = LocalApp.Perfil;
+        window.location.replace(P.sesionActiva() ? P.pantallaInicio() : 'login.html');
+    </script>
+</body>
+</html>

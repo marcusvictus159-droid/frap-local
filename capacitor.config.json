@@ -1,0 +1,8 @@
+{
+  "appId": "com.softechmx.frapcrm",
+  "appName": "FRAP Digital",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false
+  }
+}

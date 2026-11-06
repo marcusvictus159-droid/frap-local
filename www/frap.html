@@ -1,0 +1,1509 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FRAP Digital">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Captura de FRAP</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#cc0000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FRAP Digital">
+
+    <link href="vendor/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="vendor/bootstrap-icons.css">
+    
+    <script src="vendor/signature_pad.umd.min.js"></script>
+    <style>
+        :root { --cruz-red: #cc0000; --cruz-dark: #990000; }
+        
+        body { 
+            background-color: #f4f6f9; 
+            font-family: system-ui, -apple-system, sans-serif; 
+            -webkit-user-select: none; user-select: none; 
+            -webkit-tap-highlight-color: transparent; 
+        }
+        input, textarea, select { -webkit-user-select: auto; user-select: auto; }
+
+        .bg-cruz { background-color: var(--cruz-red) !important; color: white !important; }
+        .navbar { padding-top: calc(0.5rem + var(--status-bar-height, 24px)) !important; }
+        .modal-fullscreen .modal-header { padding-top: calc(0.75rem + var(--status-bar-height, 24px)); }
+        .text-cruz { color: var(--cruz-red) !important; }
+        
+        .btn-cruz { background-color: var(--cruz-red); color: white; border: none; font-weight: 500; }
+        .btn-cruz:hover, .btn-cruz:active { background-color: var(--cruz-dark); color: white; }
+        .btn-outline-cruz { border-color: var(--cruz-red); color: var(--cruz-red); }
+        .btn-outline-cruz:hover { background-color: var(--cruz-red); color: white; }
+
+        .frap-step { display: none; }
+        .frap-step.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        
+        .card { border-radius: 16px; box-shadow: 0 6px 15px rgba(0,0,0,0.05); border: none; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .btn-flotante { width: 48%; border-radius: 12px; }
+        
+        .firma-pad { border: 2px dashed #ccc; border-radius: 12px; width: 100%; height: 150px; background: #fff; touch-action: none; } 
+        .input-readonly { background-color: #e9ecef; color: var(--cruz-dark); font-weight: bold; pointer-events: none; }
+        
+        .radio-legal:checked + label { background-color: var(--cruz-red); color: white; border-color: var(--cruz-red); }
+        
+        #bannerInstalacion { display: none; }
+
+        .modal-firma .modal-content { border-radius: 0; }
+        .modal-firma .modal-body { display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f8f9fa; }
+        
+        #contenedorCanvasModal { position: relative; width: 100%; height: 75vh; border: 2px dashed var(--cruz-red); border-radius: 12px; background: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden; }
+        #canvasFirmaModal { width: 100%; height: 100%; touch-action: none; position: absolute; top: 0; left: 0; z-index: 2; }
+        .marca-base-derecha { position: absolute; right: 0; top: 0; bottom: 0; width: 45px; background-color: rgba(204, 0, 0, 0.05); border-left: 2px dashed rgba(204, 0, 0, 0.3); display: flex; align-items: center; justify-content: center; z-index: 10; pointer-events: none; }
+        .marca-base-derecha span { transform: rotate(90deg); white-space: nowrap; color: rgba(204, 0, 0, 0.5); font-weight: 900; font-size: 1rem; letter-spacing: 2px; }
+    </style>
+<script src="app-config.js"></script>
+    <script src="local-core.js"></script>
+<script src="offline-sync.js"></script>
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-cruz mb-3 sticky-top shadow-sm">
+    <div class="container d-flex justify-content-between">
+        <a href="dashboard.html" class="text-white text-decoration-none" onclick="verificarSalida(event)"><i class="bi bi-arrow-left fs-3"></i></a>
+        <span class="navbar-brand mb-0 h1 fw-bold fs-5"><i class="bi bi-file-earmark-medical"></i> Nueva FRAP</span>
+        <a href="#" class="text-white text-decoration-none" onclick="verificarSalida(event); if(!event.defaultPrevented) cerrarSesionYSalir();"><i class="bi bi-box-arrow-right fs-4"></i></a>
+    </div>
+</nav>
+
+<div class="container mb-5" style="max-width: 600px; margin: auto;">
+    <div class="card p-4">
+        <form id="frapForm">
+            
+            <!-- PASO 1 -->
+            <div class="frap-step active" id="paso1">
+                <h5 class="mb-3 text-secondary fw-bold">1. Despacho y Servicio</h5><hr>
+                
+                <div class="row g-2 mb-3">
+                    <div class="col-6"><label class="form-label fw-bold">Folio</label><input type="text" class="form-control input-readonly form-control-sm" name="folio" value="Cargando..." id="campoFolio" readonly><small id="avisoFolioOffline" class="text-warning" style="display:none;">⚠️ Folio provisional (sin conexión)</small></div>
+                    <div class="col-6">
+                        <label class="form-label fw-bold">Tipo Servicio</label>
+                        <select class="form-select form-select-sm" name="tipo_servicio">
+                            <option value="Enfermedad">Enfermedad</option>
+                            <option value="Trauma">Trauma</option>
+                            <option value="Gineco-Obstetrico">Gineco-Obstétrico</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Tripulación</label>
+                    <input type="text" class="form-control input-readonly form-control-sm mb-2" value="Jefe: Cargando..." id="campoJefe" readonly>
+                    <div class="row g-2">
+                        <div class="col-6"><input type="text" class="form-control form-control-sm" name="tripulacion_operador" placeholder="Operador"></div>
+                        <div class="col-6"><input type="text" class="form-control form-control-sm" name="tripulacion_auxiliares" placeholder="Auxiliar(es)"></div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Motivo y Prioridad</label>
+                    <div class="row g-2">
+                        <div class="col-8"><input type="text" class="form-control form-control-sm" name="motivo_atencion" placeholder="Motivo de atención"></div>
+                        <div class="col-4">
+                            <select class="form-select form-select-sm" name="prioridad_inicial">
+                                <option value="">Prioridad</option>
+                                <option value="Verde">Verde</option>
+                                <option value="Amarilla">Amarilla</option>
+                                <option value="Roja">Roja</option>
+                                <option value="Negra">Negra</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Ubicación del Servicio</label>
+                    <input type="text" class="form-control form-control-sm mb-2" name="servicio_esquina" placeholder="Calle / Colonia / Esquina">
+                    <div class="row g-2">
+                        <div class="col-6"><input type="text" class="form-control form-control-sm" name="servicio_municipio" placeholder="Municipio"></div>
+                        <div class="col-6"><input type="text" class="form-control form-control-sm" name="servicio_lugar_ocurrencia" placeholder="Lugar (Vía pública, etc.)"></div>
+                    </div>
+                </div>
+                
+                <h6 class="fw-bold mt-4 text-cruz">Cronometría (Tiempos)</h6>
+                <div class="row g-2 mb-3">
+                    <div class="col-4"><small class="text-muted">Llamada</small><input type="time" class="form-control form-control-sm" name="hora_llamada"></div>
+                    <div class="col-4"><small class="text-muted">Salida</small><input type="time" class="form-control form-control-sm" name="hora_salida"></div>
+                    <div class="col-4"><small class="text-muted">Llegada</small><input type="time" class="form-control form-control-sm" name="hora_llegada"></div>
+                    <div class="col-4"><small class="text-muted">Traslado</small><input type="time" class="form-control form-control-sm" name="hora_traslado"></div>
+                    <div class="col-4"><small class="text-muted">Hospital</small><input type="time" class="form-control form-control-sm" name="hora_hospital"></div>
+                    <div class="col-4"><small class="text-muted fw-bold text-danger">Base / Disp.</small><input type="time" class="form-control form-control-sm border-danger" name="hora_base"></div>
+                </div>
+
+                <button type="button" class="btn btn-cruz btn-lg w-100 mt-3 shadow-sm" onclick="cambiarPaso(2)">Siguiente <i class="bi bi-arrow-right"></i></button>
+            </div>
+
+            <!-- PASO 2 -->
+            <div class="frap-step" id="paso2">
+                <h5 class="mb-3 text-secondary fw-bold">2. Paciente y Evaluación Primaria</h5><hr>
+                <div class="mb-3"><label class="form-label fw-bold">Nombre del Paciente</label><input type="text" class="form-control" name="nombre_paciente"></div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Domicilio del Paciente</label>
+                    <textarea class="form-control form-control-sm mb-2" name="domicilio_paciente" rows="2" placeholder="Dirección completa"></textarea>
+                    <div class="row g-2">
+                        <div class="col-6"><small class="text-muted">Teléfono</small><input type="tel" class="form-control form-control-sm" name="paciente_telefono"></div>
+                        <div class="col-6"><small class="text-muted">Email</small><input type="email" class="form-control form-control-sm" name="paciente_email"></div>
+                        <div class="col-6"><small class="text-muted">Ocupación</small><input type="text" class="form-control form-control-sm" name="paciente_ocupacion"></div>
+                        <div class="col-6"><small class="text-muted">Código Postal</small><input type="text" class="form-control form-control-sm" name="paciente_cp"></div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-6"><label class="form-label fw-bold">Edad</label><input type="number" class="form-control" name="edad"></div>
+                    <div class="col-6">
+                        <label class="form-label fw-bold">Género</label>
+                        <select class="form-select" name="genero">
+                            <option value="Masculino">M</option>
+                            <option value="Femenino">F</option>
+                        </select>
+                    </div>
+                </div>
+
+                <h6 class="fw-bold mt-4 text-cruz">Evaluación Inicial (A-B-C)</h6>
+                
+                <!-- A: VÍA AÉREA -->
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <small class="text-muted">Vía Aérea (A)</small>
+                        <select class="form-select form-select-sm" name="form_via_aerea">
+                            <option value="No evaluado">Seleccionar...</option>
+                            <option value="Permeable">1. Permeable</option>
+                            <option value="Comprometida">2. Comprometida</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">Reflejo Deglución</small>
+                        <select class="form-select form-select-sm" name="form_deglucion">
+                            <option value="">Seleccionar...</option>
+                            <option value="Ausente">1. Ausente</option>
+                            <option value="Presente">2. Presente</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- B: VENTILACIÓN -->
+                <div class="card bg-light p-2 border mb-3">
+                    <small class="fw-bold text-dark mb-2">Ventilación (B)</small>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <small class="text-muted">Observación</small>
+                            <select class="form-select form-select-sm" name="form_vent_obs">
+                                <option value="No evaluado">Seleccionar...</option>
+                                <option value="Automatismo Regular">1. Automatismo Regular</option>
+                                <option value="Automatismo Irregular">2. Automatismo Irregular</option>
+                                <option value="Ventilación Rápida">3. Ventilación Rápida</option>
+                                <option value="Ventilación Superficial">4. Ventilación Superficial</option>
+                                <option value="Apnea">5. Apnea</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Auscultación</small>
+                            <select class="form-select form-select-sm" name="form_vent_ausc">
+                                <option value="">Seleccionar...</option>
+                                <option value="Ruidos Normales">1. Ruidos Normales</option>
+                                <option value="Ruidos Disminuidos">2. Ruidos Disminuidos</option>
+                                <option value="Ruidos Ausentes">3. Ruidos Ausentes</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Hemitórax</small>
+                            <select class="form-select form-select-sm" name="form_vent_hemi">
+                                <option value="Bilateral">Bilateral (Ambos)</option>
+                                <option value="Derecho">1. Derecho</option>
+                                <option value="Izquierdo">2. Izquierdo</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Sitio</small>
+                            <select class="form-select form-select-sm" name="form_vent_sitio">
+                                <option value="Generalizado">Generalizado</option>
+                                <option value="Apical">1. Apical</option>
+                                <option value="Base">2. Base</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- C: CIRCULACIÓN -->
+                <div class="card bg-light p-2 border mb-3">
+                    <small class="fw-bold text-dark mb-2">Circulación (C)</small>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <small class="text-muted">Presencia Pulsos</small>
+                            <select class="form-select form-select-sm" name="form_pulso_presencia">
+                                <option value="No evaluado">Seleccionar...</option>
+                                <option value="Carotideo">1. Carotídeo</option>
+                                <option value="Radial">2. Radial</option>
+                                <option value="Paro Cardiorespiratorio">3. Paro Cardiorespiratorio</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Calidad</small>
+                            <select class="form-select form-select-sm" name="form_pulso_calidad">
+                                <option value="">Seleccionar...</option>
+                                <option value="Rápido">1. Rápido</option>
+                                <option value="Lento">2. Lento</option>
+                                <option value="Rítmico">3. Rítmico</option>
+                                <option value="Arrítmico">4. Arrítmico</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Color Piel</small>
+                            <select class="form-select form-select-sm" name="form_piel_color">
+                                <option value="No evaluado">Seleccionar...</option>
+                                <option value="Normal">1. Normal</option>
+                                <option value="Pálida">2. Pálida</option>
+                                <option value="Cianótica">3. Cianótica</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Características</small>
+                            <select class="form-select form-select-sm" name="form_piel_estado">
+                                <option value="">Seleccionar...</option>
+                                <option value="Caliente">1. Caliente</option>
+                                <option value="Fría">2. Fría</option>
+                                <option value="Diaforesis">3. Diaforesis</option>
+                                <option value="Normal">Normal</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <h6 class="fw-bold mt-4 text-cruz">Estado Neurológico</h6>
+                <div class="mb-3">
+                    <small class="text-muted">Nivel de Conciencia (AVDI)</small>
+                    <select class="form-select form-select-sm" name="nivel_conciencia">
+                        <option value="1. Consciente">1. Consciente (Alerta)</option>
+                        <option value="2. Respuesta a estímulo verbal">2. Respuesta a estímulo verbal</option>
+                        <option value="3. Respuesta a estímulo doloroso">3. Respuesta a estímulo doloroso</option>
+                        <option value="4. Inconsciente">4. Inconsciente</option>
+                    </select>
+                </div>
+                
+                <div class="card bg-light p-3 border mb-3">
+                    <h6 class="fw-bold text-dark mb-3">Calculadora de Glasgow (GCS)</h6>
+                    <div class="row g-2 mb-2">
+                        <div class="col-12">
+                            <small class="text-muted">Ocular</small>
+                            <select class="form-select form-select-sm calc-gcs" name="glasgow_ocular" id="gcs_ocular">
+                                <option value="0">Seleccionar...</option>
+                                <option value="4">4 - Espontánea</option>
+                                <option value="3">3 - A la voz</option>
+                                <option value="2">2 - Al dolor</option>
+                                <option value="1">1 - Ninguna</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <small class="text-muted">Verbal</small>
+                            <select class="form-select form-select-sm calc-gcs" name="glasgow_verbal" id="gcs_verbal">
+                                <option value="0">Seleccionar...</option>
+                                <option value="5">5 - Orientada</option>
+                                <option value="4">4 - Confusa</option>
+                                <option value="3">3 - Palabras inapropiadas</option>
+                                <option value="2">2 - Sonidos incomprensibles</option>
+                                <option value="1">1 - Ninguna</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <small class="text-muted">Motora</small>
+                            <select class="form-select form-select-sm calc-gcs" name="glasgow_motora" id="gcs_motora">
+                                <option value="0">Seleccionar...</option>
+                                <option value="6">6 - Obedece órdenes</option>
+                                <option value="5">5 - Localiza el dolor</option>
+                                <option value="4">4 - Retira al dolor (Flexión normal)</option>
+                                <option value="3">3 - Decorticación (Flexión anormal)</option>
+                                <option value="2">2 - Descerebración (Extensión)</option>
+                                <option value="1">1 - Ninguna / Flácido</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row g-2 mt-2 align-items-center">
+                        <div class="col-4">
+                            <small class="fw-bold">Total</small>
+                            <input type="text" class="form-control form-control-sm text-center fw-bold fs-5 text-cruz" name="glasgow_total" id="gcs_total" readonly placeholder="0">
+                        </div>
+                        <div class="col-8">
+                            <small class="fw-bold">Severidad (TCE)</small>
+                            <input type="text" class="form-control form-control-sm text-center fw-bold" name="glasgow_severidad" id="gcs_severidad" readonly placeholder="-">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-outline-secondary btn-lg btn-flotante" onclick="cambiarPaso(1)"><i class="bi bi-arrow-left"></i> Atrás</button>
+                    <button type="button" class="btn btn-cruz btn-lg btn-flotante shadow-sm" onclick="cambiarPaso(3)">Siguiente <i class="bi bi-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <!-- PASO 3 -->
+            <div class="frap-step" id="paso3">
+                <h5 class="mb-3 text-secondary fw-bold">3. Secundaria, Signos y SAMPLER</h5><hr>
+                
+                <h6 class="fw-bold text-cruz">Evaluación Secundaria</h6>
+                <div class="row g-2 mb-3">
+                    <div class="col-6"><small class="text-muted">Pupilas</small><input type="text" class="form-control form-control-sm" name="eval_pupilas" placeholder="Isocóricas, midriáticas..."></div>
+                    <div class="col-6"><small class="text-muted">Auscultación extra</small><input type="text" class="form-control form-control-sm" name="eval_auscultacion" placeholder="Murmullo, sibilancias..."></div>
+                    <div class="col-12"><small class="text-muted">Monitoreo ECG</small><input type="text" class="form-control form-control-sm" name="eval_ecg" placeholder="Sinusal, Asistolia, Fibrilación..."></div>
+                </div>
+
+                <div class="mb-4 p-3" style="background: #e9ecef; border-radius: 12px;">
+                    <h6 class="fw-bold text-dark"><i class="bi bi-activity text-cruz"></i> Signos Vitales y PAM</h6>
+                    <div id="contenedor-signos">
+                        <div class="row g-1 mb-2 signo-fila bg-white p-2 border rounded">
+                            <div class="col-4"><small class="text-muted">Hora</small><input type="time" class="form-control form-control-sm" name="sv_hora[]"></div>
+                            <div class="col-4"><small class="text-muted">FC</small><input type="number" class="form-control form-control-sm" name="sv_fc[]" placeholder="lpm"></div>
+                            <div class="col-4"><small class="text-muted">FR</small><input type="number" class="form-control form-control-sm rts-calc" name="sv_fr[]" placeholder="rpm"></div>
+                            
+                            <div class="col-4"><small class="text-muted">TAS</small><input type="number" class="form-control form-control-sm pam-tas rts-calc" name="sv_tas[]" placeholder="mmHg"></div>
+                            <div class="col-4"><small class="text-muted">TAD</small><input type="number" class="form-control form-control-sm pam-tad" name="sv_tad[]" placeholder="mmHg"></div>
+                            <div class="col-4"><small class="text-muted">PAM</small><input type="number" class="form-control form-control-sm bg-light text-primary fw-bold" name="sv_pam[]" readonly placeholder="-"></div>
+                            
+                            <div class="col-4"><small class="text-muted">SaO2</small><input type="number" class="form-control form-control-sm" name="sv_sao2[]" placeholder="%"></div>
+                            <div class="col-4"><small class="text-muted">Temp</small><input type="number" step="0.1" class="form-control form-control-sm" name="sv_temp[]" placeholder="°C"></div>
+                            <div class="col-4"><small class="text-muted">Gluc.</small><input type="number" class="form-control form-control-sm" name="sv_glucosa[]" placeholder="mg/dl"></div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-cruz mt-2 w-100 fw-bold" onclick="agregarSigno()">+ Añadir toma de signos</button>
+                </div>
+                
+                <h6 class="fw-bold mt-4 text-cruz">Historial SAMPLER</h6>
+                <div class="row g-2 mb-3">
+                    <div class="col-12"><small class="text-muted">S - Signos y Síntomas</small><input type="text" class="form-control form-control-sm" name="sampler_signos"></div>
+                    <div class="col-6"><small class="text-muted">A - Alergias</small><input type="text" class="form-control form-control-sm" name="sampler_alergias"></div>
+                    <div class="col-6"><small class="text-muted">M - Medicamentos</small><input type="text" class="form-control form-control-sm" name="sampler_medicamentos"></div>
+                    <div class="col-6"><small class="text-muted">P - Padecimientos</small><input type="text" class="form-control form-control-sm" name="sampler_padecimientos"></div>
+                    <div class="col-6"><small class="text-muted">L - Última Comida</small><input type="time" class="form-control form-control-sm" name="sampler_ultima_comida"></div>
+                    <div class="col-12"><small class="text-muted">E - Eventos Previos</small><input type="text" class="form-control form-control-sm" name="sampler_eventos"></div>
+                    <div class="col-12"><small class="text-muted">R - Factores de Riesgo</small><input type="text" class="form-control form-control-sm" name="sampler_riesgos"></div>
+                </div>
+
+                <!-- MÓDULO GINECO-OBSTÉTRICO Y PARTO -->
+                <hr>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="switchGineco" name="gineco_aplica" value="Sí" style="transform: scale(1.4); margin-right: 10px;" onchange="toggleGineco()">
+                    <label class="form-check-label fw-bold text-cruz" for="switchGineco" style="font-size: 1.05rem;">¿Atención Gineco-Obstétrica?</label>
+                </div>
+                
+                <div id="moduloGineco" style="display: none; background: #fff0f5; padding: 15px; border-radius: 12px; border: 1px solid #f8d7da; margin-bottom: 20px;">
+                    <h6 class="fw-bold text-cruz mb-3"><i class="bi bi-gender-female"></i> Evaluación Obstétrica</h6>
+                    
+                    <div class="row g-2 mb-3">
+                        <div class="col-3"><small class="text-muted">Gestas (G)</small><input type="number" class="form-control form-control-sm" name="gineco_g" placeholder="0"></div>
+                        <div class="col-3"><small class="text-muted">Partos (P)</small><input type="number" class="form-control form-control-sm" name="gineco_p" placeholder="0"></div>
+                        <div class="col-3"><small class="text-muted">Cesáreas(C)</small><input type="number" class="form-control form-control-sm" name="gineco_c" placeholder="0"></div>
+                        <div class="col-3"><small class="text-muted">Abortos (A)</small><input type="number" class="form-control form-control-sm" name="gineco_a" placeholder="0"></div>
+                    </div>
+                    
+                    <div class="row g-2 mb-3">
+                        <div class="col-6"><small class="text-muted">Semanas (SDG)</small><input type="number" class="form-control form-control-sm" name="gineco_sdg" placeholder="Ej. 38"></div>
+                        <div class="col-6"><small class="text-muted">Frec. Fetal (FCF)</small><input type="number" class="form-control form-control-sm" name="gineco_fcf" placeholder="LPM"></div>
+                    </div>
+                    
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <small class="text-muted">Contracciones</small>
+                            <select class="form-select form-select-sm" name="gineco_contracciones">
+                                <option value="No">No / Ninguna</option>
+                                <option value="Irregulares">Irregulares</option>
+                                <option value="Regulares">Regulares</option>
+                            </select>
+                        </div>
+                        <div class="col-6"><small class="text-muted">Frec / Duración</small><input type="text" class="form-control form-control-sm" name="gineco_duracion" placeholder="Ej. 3 en 10 min"></div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <small class="text-muted">Características del líquido / sangrado transvaginal</small>
+                        <input type="text" class="form-control form-control-sm" name="gineco_liquido" placeholder="Ej. Claro, meconial, sangrado abundante...">
+                    </div>
+
+                    <!-- MÓDULO DE PARTO Y APGAR INTERactivo -->
+                    <hr class="border-danger opacity-25 my-3">
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="switchParto" name="parto_aplica" value="Sí" style="transform: scale(1.4); margin-right: 10px;" onchange="toggleParto()">
+                        <label class="form-check-label fw-bold text-danger" for="switchParto" style="font-size: 1rem;">¿Se atendió Parto (Nacimiento)?</label>
+                    </div>
+                    
+                    <div id="moduloParto" style="display: none; background: #fff; padding: 12px; border-radius: 8px; border: 1px dashed #f5c2c7;">
+                        <h6 class="fw-bold text-dark mb-2"><i class="bi bi-person-hearts text-danger"></i> Datos del Recién Nacido</h6>
+                        
+                        <div class="row g-2 mb-3">
+                            <div class="col-6"><small class="text-muted">Hora de Nacimiento</small><input type="time" class="form-control form-control-sm" name="parto_hora_nacimiento"></div>
+                            <div class="col-6">
+                                <small class="text-muted">Sexo</small>
+                                <select class="form-select form-select-sm" name="parto_sexo">
+                                    <option value="">Selecciona...</option>
+                                    <option value="Masculino">Masculino</option>
+                                    <option value="Femenino">Femenino</option>
+                                    <option value="Indeterminado">Indeterminado</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- CALCULADORA APGAR INTERACTIVA -->
+                        <div class="card bg-light p-3 border mb-3">
+                            <h6 class="fw-bold text-danger mb-2">Calculadora APGAR Neonatal</h6>
+                            
+                            <div class="mb-2">
+                                <small class="text-muted d-block">1. Frecuencia Cardíaca</small>
+                                <select class="form-select form-select-sm calc-apgar" name="apgar_fc" id="apgar_fc">
+                                    <option value="0">0 - Ausente / Sin latidos</option>
+                                    <option value="1">1 - Menor a 100 lpm</option>
+                                    <option value="2">2 - Mayor a 100 lpm</option>
+                                </select>
+                            </div>
+                            <div class="mb-2">
+                                <small class="text-muted d-block">2. Esfuerzo Respiratorio</small>
+                                <select class="form-select form-select-sm calc-apgar" name="apgar_resp" id="apgar_resp">
+                                    <option value="0">0 - Ausente / Apnea</option>
+                                    <option value="1">1 - Llanto débil / Irregular</option>
+                                    <option value="2">2 - Llanto fuerte / Bueno</option>
+                                </select>
+                            </div>
+                            <div class="mb-2">
+                                <small class="text-muted d-block">3. Tono Muscular</small>
+                                <select class="form-select form-select-sm calc-apgar" name="apgar_tono" id="apgar_tono">
+                                    <option value="0">0 - Flácido / Sin tono</option>
+                                    <option value="1">1 - Cierta flexión en extremidades</option>
+                                    <option value="2">2 - Movimiento activo / Buena flexión</option>
+                                </select>
+                            </div>
+                            <div class="mb-2">
+                                <small class="text-muted d-block">4. Irritabilidad Refleja (Estímulo)</small>
+                                <select class="form-select form-select-sm calc-apgar" name="apgar_reflejo" id="apgar_reflejo">
+                                    <option value="0">0 - Sin respuesta</option>
+                                    <option value="1">1 - Mueca / Llanto débil al estímulo</option>
+                                    <option value="2">2 - Tos, estornudo o llanto vigoroso</option>
+                                </select>
+                            </div>
+                            <div class="mb-2">
+                                <small class="text-muted d-block">5. Coloración (Piel)</small>
+                                <select class="form-select form-select-sm calc-apgar" name="apgar_color" id="apgar_color">
+                                    <option value="0">0 - Azul / Pálido generalizado</option>
+                                    <option value="1">1 - Cuerpo rosado, extremidades cianóticas</option>
+                                    <option value="2">2 - Completamente rosado</option>
+                                </select>
+                            </div>
+
+                            <div class="row g-2 mt-2 align-items-center">
+                                <div class="col-5">
+                                    <small class="fw-bold">Puntaje APGAR</small>
+                                    <input type="text" class="form-control form-control-sm text-center fw-bold fs-5 text-danger" name="parto_apgar_1" id="apgar_total" readonly placeholder="0">
+                                </div>
+                                <div class="col-7">
+                                    <small class="fw-bold">Evaluación Clínica</small>
+                                    <input type="text" class="form-control form-control-sm text-center fw-bold" name="parto_apgar_eval" id="apgar_eval" readonly placeholder="-">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row g-2 mb-3">
+                            <div class="col-6"><small class="text-muted">Alumbramiento (Placenta)</small><input type="time" class="form-control form-control-sm" name="parto_hora_placenta" placeholder="Hora"></div>
+                            <div class="col-6">
+                                <small class="text-muted">Reanimación Neonatal</small>
+                                <select class="form-select form-select-sm" name="parto_reanimacion">
+                                    <option value="No">No / Ninguna</option>
+                                    <option value="Sí, básica">Sí, Básica</option>
+                                    <option value="Sí, avanzada">Sí, Avanzada</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-2">
+                            <small class="text-muted">Complicaciones / Observaciones del Neonato</small>
+                            <input type="text" class="form-control form-control-sm" name="parto_complicaciones" placeholder="Ej. Circular de cordón, cianosis, etc.">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-outline-secondary btn-lg btn-flotante" onclick="cambiarPaso(2)"><i class="bi bi-arrow-left"></i> Atrás</button>
+                    <button type="button" class="btn btn-cruz btn-lg btn-flotante shadow-sm" onclick="cambiarPaso(4)">Siguiente <i class="bi bi-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <!-- PASO 4 -->
+            <div class="frap-step" id="paso4">
+                <h5 class="mb-3 text-secondary fw-bold">4. Trauma, Lesiones y Dolor</h5><hr>
+                
+                <!-- CALCULADORA DE TRAUMA SCORE -->
+                <div class="card bg-white p-3 border border-primary mb-4 shadow-sm">
+                    <h6 class="fw-bold text-primary mb-2"><i class="bi bi-heart-pulse-fill"></i> Trauma Score Revisado (RTS)</h6>
+                    <p class="small text-muted mb-2" style="line-height: 1.1;">Se calcula automáticamente con el <b>Glasgow</b> y la <b>primera toma</b> de Signos Vitales (TAS y FR).</p>
+                    <div class="row g-2 align-items-center">
+                        <div class="col-3">
+                            <small class="fw-bold">Puntaje</small>
+                            <input type="text" class="form-control form-control-sm text-center fw-bold fs-5 text-primary" name="trauma_score" id="trauma_score_total" readonly placeholder="0">
+                        </div>
+                        <div class="col-9">
+                            <small class="fw-bold">Pronóstico / Sobrevida</small>
+                            <input type="text" class="form-control form-control-sm text-center fw-bold" name="trauma_score_eval" id="trauma_score_eval" readonly placeholder="-">
+                        </div>
+                    </div>
+                </div>
+
+                <h6 class="fw-bold text-cruz">Semiología del Dolor (ALICIA)</h6>
+                <div class="row g-2 mb-4">
+                    <div class="col-6"><small class="text-muted">A - Aparición</small><input type="text" class="form-control form-control-sm" name="dolor_aparicion"></div>
+                    <div class="col-6"><small class="text-muted">L - Localización</small><input type="text" class="form-control form-control-sm" name="dolor_localizacion"></div>
+                    <div class="col-6"><small class="text-muted">I - Irradiación</small><input type="text" class="form-control form-control-sm" name="dolor_irradiacion"></div>
+                    <div class="col-6"><small class="text-muted">C - Características</small><input type="text" class="form-control form-control-sm" name="dolor_caracteristicas"></div>
+                    <div class="col-6">
+                        <small class="text-muted">I - Intensidad (EVA)</small>
+                        <select class="form-select form-select-sm" name="dolor_intensidad">
+                            <option value="">Selecciona...</option>
+                            <option value="1-3 Leve">1 a 3 (Leve)</option>
+                            <option value="4-7 Moderado">4 a 7 (Moderado)</option>
+                            <option value="8-10 Severo">8 a 10 (Severo)</option>
+                        </select>
+                    </div>
+                    <div class="col-6"><small class="text-muted">A - Alivio</small><input type="text" class="form-control form-control-sm" name="dolor_alivio"></div>
+                </div>
+
+                <!-- MÓDULO QUEMADOS -->
+                <hr>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="switchQuemados" name="quemados_aplica" value="Sí" style="transform: scale(1.4); margin-right: 10px;" onchange="toggleQuemados()">
+                    <label class="form-check-label fw-bold text-cruz" for="switchQuemados" style="font-size: 1.05rem;">¿Paciente con Quemaduras?</label>
+                </div>
+                <div id="moduloQuemados" style="display: none; background: #fff8f0; padding: 15px; border-radius: 12px; border: 1px solid #ffeeba; margin-bottom: 20px;">
+                    <h6 class="fw-bold text-cruz mb-2"><i class="bi bi-fire"></i> Evaluación de Superficie Corporal Quemada</h6>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <small class="text-muted">Grado predominante</small>
+                            <select class="form-select form-select-sm" name="quemados_grado">
+                                <option value="1er Grado">1er Grado (Epidérmica)</option>
+                                <option value="2do Grado">2do Grado (Espesor parcial)</option>
+                                <option value="3er Grado">3er Grado (Espesor total)</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">% Total Afectado (SCQ)</small>
+                            <input type="number" class="form-control form-control-sm" name="quemados_porcentaje" placeholder="Ej. 18%">
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">Regiones corporales afectadas / Detalles</small>
+                        <input type="text" class="form-control form-control-sm" name="quemados_regiones" placeholder="Ej. Tórax anterior y brazo derecho 2do grado">
+                    </div>
+                </div>
+
+                <h6 class="fw-bold mt-2 text-cruz">Cinemática de Trauma (Vial)</h6>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <small class="text-muted">Tipo de Impacto</small>
+                        <select class="form-select form-select-sm" name="trauma_impacto">
+                            <option value="No aplica">No aplica</option>
+                            <option value="Frontal">Frontal</option>
+                            <option value="Lateral">Lateral</option>
+                            <option value="Posterior">Posterior</option>
+                            <option value="Volcadura">Volcadura</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">Cinturón / Casco</small>
+                        <select class="form-select form-select-sm" name="trauma_cinturon">
+                            <option value="No aplica">No aplica</option>
+                            <option value="Colocado">Colocado</option>
+                            <option value="No colocado">No colocado</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">Bolsas de Aire</small>
+                        <select class="form-select form-select-sm" name="trauma_bolsas">
+                            <option value="No aplica">No aplica</option>
+                            <option value="Desplegadas">Desplegadas</option>
+                            <option value="No desplegadas">No desplegadas</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">Estado del Paciente</small>
+                        <select class="form-select form-select-sm" name="trauma_estado">
+                            <option value="Íntegro">Íntegro</option>
+                            <option value="Eyectado">Eyectado</option>
+                            <option value="Prensado">Prensado</option>
+                            <option value="Deceso">Deceso en escena</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mb-4 text-center mt-4">
+                    <label class="form-label fw-bold text-cruz w-100 text-start">Mapa Corporal (Nomenclatura)</label>
+                    <div class="small text-muted mb-2 text-start" style="font-size: 0.8rem; line-height: 1.2;">
+                        <strong>Claves:</strong> A=Abrasión, C=Contusión, D=Dolor, Fx=Fractura, H=Hemorragia, L=Laceración, P=Punción, Q=Quemadura
+                    </div>
+                    <div style="border: 2px solid #e9ecef; border-radius: 12px; display: inline-block; background: #fff; max-width: 100%;">
+                        <canvas id="mapaTrauma" width="300" height="350" style="touch-action: none;"></canvas>
+                    </div>
+                    <br>
+                    <button type="button" class="btn btn-sm btn-outline-cruz mt-2" onclick="limpiarMapa()"><i class="bi bi-eraser"></i> Borrar Marcas</button>
+                    <input type="hidden" name="base64_mapa_lesiones" id="base64_mapa_lesiones">
+                </div>
+
+                <div class="mb-3"><label class="form-label fw-bold">Hallazgos Físicos (Detalles)</label><textarea class="form-control" name="hallazgos" rows="3"></textarea></div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-outline-secondary btn-lg btn-flotante" onclick="cambiarPaso(3)"><i class="bi bi-arrow-left"></i> Atrás</button>
+                    <button type="button" class="btn btn-cruz btn-lg btn-flotante shadow-sm" onclick="cambiarPaso(5)">Siguiente <i class="bi bi-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <!-- PASO 5 -->
+            <div class="frap-step" id="paso5">
+                <h5 class="mb-3 text-secondary fw-bold">5. Tratamiento y Narrativa</h5><hr>
+                
+                <!-- CONTROL DE HEMORRAGIAS (X) -->
+                <h6 class="fw-bold text-cruz"><i class="bi bi-droplet-fill"></i> Control de Hemorragias (Exanguinantes)</h6>
+                <div class="row g-2 mb-4">
+                    <div class="col-6">
+                        <select class="form-select form-select-sm" name="hemorragia_tipo">
+                            <option value="Ninguna">Tipo...</option>
+                            <option value="Capilar">Capilar</option>
+                            <option value="Venosa">Venosa</option>
+                            <option value="Arterial">Arterial</option>
+                            <option value="Mixta">Mixta</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <select class="form-select form-select-sm" name="hemorragia_control">
+                            <option value="Ninguno">Método de Control...</option>
+                            <option value="Presión Directa">Presión Directa</option>
+                            <option value="Presión Indirecta">Presión Indirecta</option>
+                            <option value="Gravedad">Gravedad</option>
+                            <option value="Vendaje Compresivo">Vendaje Compresivo</option>
+                            <option value="Crioterapia">Crioterapia</option>
+                            <option value="MAST">MAST</option>
+                            <option value="Agente Hemostático">Agente Hemostático (Extra)</option>
+                            <option value="Torniquete">Torniquete (Extra)</option>
+                        </select>
+                    </div>
+                    <div class="col-12 mt-2">
+                        <input type="text" class="form-control form-control-sm" name="hemorragia_torniquete_detalles" placeholder="Detalles de aplicación y extremidad">
+                    </div>
+                </div>
+
+                <!-- MÓDULO VÍA AÉREA Y VENTILACIÓN -->
+                <h6 class="fw-bold text-cruz">Vía Aérea, Ventilación y O2</h6>
+                <div class="card bg-light p-2 border mb-3">
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <small class="text-muted">Vía Aérea</small>
+                            <select class="form-select form-select-sm" name="form_trat_via_aerea">
+                                <option value="">Ninguna...</option>
+                                <option value="Aspiración">Aspiración</option>
+                                <option value="Cánula Orofaríngea">Cánula Orofaríngea</option>
+                                <option value="Cánula Nasofaríngea">Cánula Nasofaríngea</option>
+                                <option value="Intubación Orotraqueal">Intubación Orotraqueal</option>
+                                <option value="Intubación Nasotraqueal">Intubación Nasotraqueal</option>
+                                <option value="Combitubo">Combitubo</option>
+                                <option value="Mascarilla Laríngea">Mascarilla Laríngea</option>
+                                <option value="Cricotiroidotomía">Cricotiroidotomía p/punción</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Control Cervical</small>
+                            <select class="form-select form-select-sm" name="form_trat_cervical">
+                                <option value="">Ninguno...</option>
+                                <option value="Manual">Manual</option>
+                                <option value="Collarín Rígido">Collarín Rígido</option>
+                                <option value="Collarín Blando">Collarín Blando</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Asistencia Ventilatoria</small>
+                            <select class="form-select form-select-sm" name="form_trat_ventilacion">
+                                <option value="">Ninguna...</option>
+                                <option value="BVM">Balón-Válvula-Mascarilla</option>
+                                <option value="Válvula Demanda">Válvula de Demanda</option>
+                                <option value="Ventilador Automático">Ventilador Automático</option>
+                                <option value="Hiperventilación">Hiperventilación</option>
+                                <option value="Descompresión Der">Descompresión P. (Der)</option>
+                                <option value="Descompresión Izq">Descompresión P. (Izq)</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Frec / Vol (Ventilador)</small>
+                            <input type="text" class="form-control form-control-sm" name="form_trat_vent_detalles" placeholder="Ej. F:12 V:500">
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Oxigenoterapia</small>
+                            <select class="form-select form-select-sm" name="form_trat_oxigeno">
+                                <option value="">Ninguna...</option>
+                                <option value="Puntas Nasales">Puntas Nasales</option>
+                                <option value="Mascarilla Simple">Mascarilla Simple</option>
+                                <option value="Mascarilla con Reservorio">Masc. con Reservorio</option>
+                                <option value="Mascarilla Venturi">Mascarilla Venturi</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Lts x Min (O2)</small>
+                            <input type="number" class="form-control form-control-sm" name="form_trat_o2_lts" placeholder="Ej. 12">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MÓDULO ACCESOS Y SOLUCIONES -->
+                <h6 class="fw-bold text-cruz">Vías Venosas y Soluciones</h6>
+                <div class="card bg-light p-2 border mb-3">
+                    <div class="row g-2 mb-2">
+                        <div class="col-4"><small class="text-muted">Línea IV #</small><input type="text" class="form-control form-control-sm" name="form_trat_via_linea"></div>
+                        <div class="col-4"><small class="text-muted">Catéter #</small><input type="number" class="form-control form-control-sm" name="form_trat_via_cateter"></div>
+                        <div class="col-4">
+                            <small class="text-muted">Sitio</small>
+                            <select class="form-select form-select-sm" name="form_trat_via_sitio">
+                                <option value="">Sitio...</option>
+                                <option value="Mano">Mano</option>
+                                <option value="Pliegue Antecubital">Pliegue Antecubital</option>
+                                <option value="Intraosea">Intraosea</option>
+                                <option value="Otra">Otra</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <small class="text-muted">Tipo de Solución</small>
+                            <select class="form-select form-select-sm" name="form_trat_solucion_tipo">
+                                <option value="Ninguna">Ninguna</option>
+                                <option value="Hartmann">Hartmann</option>
+                                <option value="NaCl 0.9%">NaCl 0.9%</option>
+                                <option value="Mixta">Mixta</option>
+                                <option value="Glucosa 5%">Glucosa 5%</option>
+                                <option value="Otra">Otra</option>
+                            </select>
+                        </div>
+                        <div class="col-6"><input type="text" class="form-control form-control-sm" name="form_trat_solucion_cantidad" placeholder="Cantidad (Ej. 500ml)"></div>
+                        <div class="col-6"><input type="text" class="form-control form-control-sm" name="form_trat_solucion_infusiones" placeholder="Infusiones (Ej. 1)"></div>
+                    </div>
+                </div>
+
+                <!-- MÓDULO INTOXICADOS -->
+                <hr>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="switchIntoxicados" name="intoxicacion_aplica" value="Sí" style="transform: scale(1.4); margin-right: 10px;" onchange="toggleIntoxicados()">
+                    <label class="form-check-label fw-bold text-cruz" for="switchIntoxicados" style="font-size: 1.05rem;">¿Paciente Intoxicado / Envenenado?</label>
+                </div>
+                <div id="moduloIntoxicados" style="display: none; background: #f0f8ff; padding: 15px; border-radius: 12px; border: 1px solid #b8daff; margin-bottom: 20px;">
+                    <h6 class="fw-bold text-cruz mb-2"><i class="bi bi-exclamation-triangle-fill"></i> Registro de Intoxicación</h6>
+                    
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <small class="text-muted">Vía de Exposición</small>
+                            <select class="form-select form-select-sm" name="intoxicacion_via">
+                                <option value="Ingesta / Oral">Ingesta (Oral)</option>
+                                <option value="Inhalación">Inhalación</option>
+                                <option value="Absorción cutánea">Absorción cutánea</option>
+                                <option value="Inyección / Picadura">Inyección / Picadura</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Tiempo transcurrido</small>
+                            <input type="text" class="form-control form-control-sm" name="intoxicacion_tiempo" placeholder="Ej. 45 minutos">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <small class="text-muted">Sustancia / Agente sospechoso (Drogas, químicos, alcohol, plantas)</small>
+                        <input type="text" class="form-control form-control-sm" name="intoxicacion_sustancia" placeholder="Ej. Organofosforados, alcohol etílico, etc.">
+                    </div>
+
+                    <div class="mb-2">
+                        <small class="text-muted">Síndromes toxicológicos / Signos observados</small>
+                        <input type="text" class="form-control form-control-sm" name="intoxicacion_sintomas" placeholder="Ej. Miosis, sialorrea, bradicardia, etc.">
+                    </div>
+                </div>
+                
+                <!-- CONTROL DE Insumos -->
+                <div class="card bg-light p-3 border mb-3 mt-3">
+                    <h6 class="fw-bold text-secondary mb-2">Control de Material Utilizado</h6>
+                    <textarea class="form-control form-control-sm" name="insumos_utilizados" rows="2" placeholder="Ej. 5 gasas, 2 vendas de 10cm, 1 punzocat 18G..."></textarea>
+                </div>
+
+                <!-- NARRATIVA -->
+                <div class="card bg-white p-3 border mb-3 shadow-sm">
+                    <h6 class="fw-bold text-dark mb-2">Narrativa / Observaciones del Servicio</h6>
+                    <textarea class="form-control form-control-sm" name="observaciones" rows="5" placeholder="Ej. Masculino de 35 años en posición sedente, inconsciente y sin signos vitales. Testigos refieren agresión por arma blanca..."></textarea>
+                </div>
+
+                <hr>
+
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="switchRcp" name="rcp_iniciado" value="Sí" style="transform: scale(1.4); margin-right: 10px;" onchange="toggleRcp()">
+                    <label class="form-check-label fw-bold text-cruz" for="switchRcp" style="font-size: 1.05rem;">¿Paciente en Paro (Se aplicó RCP)?</label>
+                </div>
+                <div id="moduloRcp" style="display: none; background: #fff3f3; padding: 12px; border-radius: 12px; border: 1px solid #ffcccc; margin-bottom: 20px;">
+                    <h6 class="fw-bold text-cruz mb-2">Bitácora de Reanimación Cardiopulmonar</h6>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6"><small class="text-muted">Hora de Inicio</small><input type="time" class="form-control form-control-sm" name="rcp_hora_inicio"></div>
+                        <div class="col-6">
+                            <small class="text-muted">Ritmo Inicial</small>
+                            <select class="form-select form-select-sm" name="rcp_ritmo_inicial">
+                                <option value="-">Selecciona...</option>
+                                <option value="FV (Fibrilación Ventricular)">FV</option>
+                                <option value="TV (Taquicardia Ventricular sin pulso)">TV sin pulso</option>
+                                <option value="Asistolia">Asistolia</option>
+                                <option value="AESP (Actividad Eléctrica Sin Pulso)">AESP</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <small class="text-muted">¿Se desfibriló?</small>
+                            <select class="form-select form-select-sm" name="rcp_desfibrilacion">
+                                <option value="No">No</option>
+                                <option value="Sí">Sí</option>
+                            </select>
+                        </div>
+                        <div class="col-6"><small class="text-muted">No. de Descargas</small><input type="number" class="form-control form-control-sm" name="rcp_numero_descargas" placeholder="0"></div>
+                    </div>
+                    <div class="mb-2"><small class="text-muted">Medicamentos Aplicados</small><input type="text" class="form-control form-control-sm" name="rcp_medicamentos" placeholder="Ej. Adrenalina 1mg c/3 min"></div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <small class="text-muted">Resultado del RCP</small>
+                            <select class="form-select form-select-sm" name="rcp_resultado">
+                                <option value="-">Selecciona...</option>
+                                <option value="ROSC (Retorno de Circulación)">ROSC (Recuperó pulso)</option>
+                                <option value="Sin cambios (Cese de maniobras)">Cese de maniobras (Deceso)</option>
+                                <option value="Traslado en curso con RCP">Traslado en curso</option>
+                            </select>
+                        </div>
+                        <div class="col-6"><small class="text-muted">Hora Cese / ROSC</small><input type="time" class="form-control form-control-sm" name="rcp_hora_final"></div>
+                    </div>
+                </div>
+
+                <h6 class="fw-bold text-cruz">Dictamen y Resolución Final</h6>
+                <div class="row g-2 mb-3">
+                    <div class="col-12">
+                        <select class="form-select" name="resolucion_final">
+                            <option value="Traslado a Hospital">Traslado a Hospital</option>
+                            <option value="No Amerita Traslado">No Amerita Traslado (Se queda en el lugar)</option>
+                            <option value="Se Niega a Atención/Traslado">Se Niega a Atención / Traslado</option>
+                            <option value="Cadáver en el Lugar">Cadáver en el Lugar</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <select class="form-select form-select-sm" name="triage_final">
+                            <option value="">Triage Final...</option>
+                            <option value="Verde">Verde</option>
+                            <option value="Amarillo">Amarillo</option>
+                            <option value="Rojo">Rojo</option>
+                            <option value="Negro">Negro</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <select class="form-select form-select-sm" name="vehiculo_traslado">
+                            <option value="">Unidad...</option>
+                            <option value="OAX-082">OAX-082</option>
+                            <option value="OAX-083">OAX-083</option>
+                            <option value="OAX-084">OAX-084</option>
+                            <option value="OAX-085">OAX-085</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-3"><label class="form-label fw-bold">Hospital Receptor (Si aplica)</label><input type="text" class="form-control" name="hospital_receptor"></div>
+                <div class="mb-3"><label class="form-label fw-bold">Médico que Recibe</label><input type="text" class="form-control" name="medico_recibe"></div>
+                
+                <div class="mb-4">
+                    <label class="form-label fw-bold text-cruz">Firma del Médico Receptor</label>
+                    <canvas id="firmaMedico" class="firma-pad" style="pointer-events: none;"></canvas>
+                    <button type="button" class="btn btn-outline-cruz btn-sm w-100 mt-2 fw-bold" onclick="abrirModalFirma('medico')"><i class="bi bi-pen"></i> Firmar / Modificar</button>
+                    <!-- Inputs ocultos para asegurar los datos -->
+                    <input type="hidden" name="base64_firma_medico" id="base64_firma_medico">
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-outline-secondary btn-lg btn-flotante" onclick="cambiarPaso(4)"><i class="bi bi-arrow-left"></i> Atrás</button>
+                    <button type="button" class="btn btn-cruz btn-lg btn-flotante shadow-sm" onclick="cambiarPaso(6)">Siguiente <i class="bi bi-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <!-- PASO 6 Y BOTÓN DE BORRADOR -->
+            <div class="frap-step" id="paso6">
+                <h5 class="mb-3 text-secondary fw-bold">6. Marco Legal y Firmas</h5><hr>
+                
+                <div class="mb-4">
+                    <label class="form-label fw-bold text-cruz">Declaración del Paciente / Testigo</label>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check radio-legal" name="tipo_consentimiento" id="cons_informado" value="Consentimiento Informado" checked>
+                        <label class="btn btn-outline-secondary fw-bold" for="cons_informado">Consentimiento</label>
+
+                        <input type="radio" class="btn-check radio-legal" name="tipo_consentimiento" id="neg_atencion" value="Negativa de Atención">
+                        <label class="btn btn-outline-secondary fw-bold" for="neg_atencion">Negativa</label>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold text-cruz">Firma del Paciente o Testigo</label>
+                    <input type="text" class="form-control form-control-sm mb-2" name="nombre_firma_paciente" placeholder="Nombre completo de quien firma">
+                    <canvas id="firmaPaciente" class="firma-pad" style="pointer-events: none;"></canvas>
+                    <button type="button" class="btn btn-outline-cruz btn-sm w-100 mt-2 fw-bold" onclick="abrirModalFirma('paciente')"><i class="bi bi-pen"></i> Firmar / Modificar</button>
+                    <!-- Inputs ocultos -->
+                    <input type="hidden" name="base64_firma_paciente" id="base64_firma_paciente">
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold text-dark">Firma del Jefe de Servicio (Tú)</label>
+                    <canvas id="firmaParamedico" class="firma-pad" style="pointer-events: none;"></canvas>
+                    <button type="button" class="btn btn-outline-secondary btn-sm w-100 mt-2 fw-bold" onclick="abrirModalFirma('paramedico')"><i class="bi bi-pen"></i> Firmar / Modificar</button>
+                    <!-- Inputs ocultos -->
+                    <input type="hidden" name="base64_firma_paramedico" id="base64_firma_paramedico">
+                </div>
+
+                <div class="card bg-light p-3 mb-4 border">
+                    <h6 class="fw-bold text-secondary mb-3">Autoridades en Escena y Pertenencias</h6>
+                    <div class="mb-2">
+                        <small class="text-muted">Corporación</small>
+                        <input type="text" class="form-control form-control-sm" name="autoridad_corporacion" placeholder="Ej. Policía Municipal / Vial">
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <small class="text-muted">Nombre del Oficial</small>
+                            <input type="text" class="form-control form-control-sm" name="autoridad_oficial" placeholder="Oficial a cargo">
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Número de Unidad</small>
+                            <input type="text" class="form-control form-control-sm" name="autoridad_unidad" placeholder="Patrulla / Unidad">
+                        </div>
+                    </div>
+                    <div>
+                        <small class="text-muted">Pertenencias entregadas a</small>
+                        <input type="text" class="form-control form-control-sm" name="pertenencias_recibe" placeholder="Nombre del familiar o autoridad">
+                    </div>
+                </div>
+
+                <!-- BOTONERA TRIPLE: ATRÁS, BORRADOR Y ENVIAR -->
+                <div class="d-flex justify-content-between mt-4 gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-lg flex-fill" onclick="cambiarPaso(5)"><i class="bi bi-arrow-left"></i></button>
+                    
+                    <button type="button" class="btn btn-warning text-dark btn-lg flex-fill fw-bold shadow-sm" onclick="guardarBorrador()"><i class="bi bi-floppy"></i> Borrador</button>
+                    
+                    <button type="submit" class="btn btn-success btn-lg flex-fill shadow-sm" onclick="prepararEnvio()"><i class="bi bi-send-fill"></i> Enviar</button>
+                </div>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<!-- MODAL PARA FIRMA EN PANTALLA COMPLETA -->
+<div class="modal fade modal-firma" id="modalFirmaFullscreen" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white border-0">
+                <h5 class="modal-title"><i class="bi bi-pen"></i> Área de Firma</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-3"><i class="bi bi-phone-landscape text-cruz"></i> Acuesta el teléfono. El <b>lado derecho</b> es la parte de abajo de la firma.</p>
+                
+                <div id="contenedorCanvasModal">
+                    <div class="marca-base-derecha">
+                        <span><i class="bi bi-arrow-right-square-fill"></i> BASE / LADO DERECHO <i class="bi bi-arrow-right-square-fill"></i></span>
+                    </div>
+                    <canvas id="canvasFirmaModal"></canvas>
+                </div>
+
+            </div>
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-outline-danger" onclick="limpiarFirmaModal()">Borrar</button>
+                <button type="button" class="btn btn-success px-4" onclick="guardarFirmaModal()">Guardar Firma</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="vendor/bootstrap.bundle.min.js"></script>
+<script>
+    let deferredPrompt;
+    const banner = document.getElementById('bannerInstalacion');
+    const btnInstalar = document.getElementById('btnInstalar');
+    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; if(banner) banner.style.display = 'block'; });
+    if(btnInstalar){
+        btnInstalar.addEventListener('click', async () => { banner.style.display = 'none'; if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt = null; } });
+    }
+
+    let padMedico, padPaciente, padParamedico, padFirmaModal;
+    let destinoFirmaActual = '';
+    let mapaModificado = false;
+    const canvasTrauma = document.getElementById('mapaTrauma');
+    const ctxTrauma = canvasTrauma.getContext('2d');
+    
+    // VARIABLE DE SEGURIDAD PARA SALIR DE LA APP
+    let saliendoSeguro = false;
+
+    // CAPA 2: ALERTA ANTI-ESCAPE (Evita que recarguen la página o la cierren por error)
+    window.addEventListener('beforeunload', function (e) {
+        if (!saliendoSeguro) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+
+    // Función para los enlaces superiores (volver al dashboard o cerrar sesión)
+    function verificarSalida(e) {
+        if (!saliendoSeguro) {
+            if (!confirm("¿Seguro que quieres salir? Perderás los datos no guardados de esta FRAP.")) {
+                e.preventDefault();
+            } else {
+                saliendoSeguro = true;
+            }
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        // Inicializar los pads pequeños pero BLOQUEAR el dibujo en ellos
+        padMedico = new SignaturePad(document.getElementById('firmaMedico'), { backgroundColor: 'rgb(255, 255, 255)' });
+        padMedico.off(); 
+        
+        padPaciente = new SignaturePad(document.getElementById('firmaPaciente'), { backgroundColor: 'rgb(255, 255, 255)' });
+        padPaciente.off(); 
+        
+        padParamedico = new SignaturePad(document.getElementById('firmaParamedico'), { backgroundColor: 'rgb(255, 255, 255)' });
+        padParamedico.off(); 
+        
+        document.querySelectorAll('.calc-gcs').forEach(select => { select.addEventListener('change', calcularGlasgow); });
+        document.querySelectorAll('.calc-apgar').forEach(select => { select.addEventListener('change', calcularApgar); });
+        
+        // EVENTO INTELIGENTE PARA CALCULAR PAM Y TRAUMA SCORE
+        document.getElementById('contenedor-signos').addEventListener('input', function(e) {
+            if(e.target.classList.contains('pam-tas') || e.target.classList.contains('pam-tad')) {
+                let row = e.target.closest('.signo-fila');
+                let tas = parseFloat(row.querySelector('.pam-tas').value);
+                let tad = parseFloat(row.querySelector('.pam-tad').value);
+                let pamInput = row.querySelector('[name="sv_pam[]"]');
+                if(!isNaN(tas) && !isNaN(tad)) { pamInput.value = Math.round((tas + 2 * tad) / 3); } 
+                else { pamInput.value = ''; }
+            }
+            if(e.target.classList.contains('rts-calc') || e.target.classList.contains('pam-tas')) {
+                calcularTraumaScore();
+            }
+        });
+        
+        // CAPA 1: Registrar el paso inicial en el historial físico del celular
+        try {
+            history.replaceState({ paso: 1 }, "Paso 1", "#paso1");
+        } catch(e) {}
+
+        // CAPA 3: AUTOGUARDADO FANTASMA
+        document.getElementById('frapForm').addEventListener('change', autoGuardarFantasma);
+        document.getElementById('frapForm').addEventListener('input', autoGuardarFantasma);
+
+        let borradorGuardado = localStorage.getItem('frap_borrador');
+        let cargarBorradorConfirmado = false;
+
+        if (borradorGuardado) {
+            if (confirm('Tienes un FRAP guardado como borrador (pausado).\n\n¿Deseas cargarlo para poner tu hora de base y terminarlo?')) {
+                cargarBorradorConfirmado = true;
+                cargarBorrador(JSON.parse(borradorGuardado));
+            } else {
+                localStorage.removeItem('frap_borrador');
+            }
+        }
+
+        let datosBorrador = borradorGuardado ? JSON.parse(borradorGuardado) : {};
+        if (!cargarBorradorConfirmado || !datosBorrador['base64_mapa_lesiones']) {
+            const imgSilueta = new Image();
+            imgSilueta.src = 'silueta.png';
+            imgSilueta.onload = function() {
+                ctxTrauma.drawImage(imgSilueta, 0, 0, canvasTrauma.width, canvasTrauma.height);
+            };
+        }
+
+        sincronizarPendientes(); 
+    });
+
+    // SISTEMA FANTASMA DE GUARDADO (NO REQUIERE CLIC)
+    function autoGuardarFantasma() {
+        let formData = new FormData(document.getElementById('frapForm'));
+        let borrador = {};
+        for (let [key, value] of formData.entries()) {
+            if (!key.includes('base64_')) { // Ignoramos las imágenes gigantes al vuelo para no alentar el celular
+                if (key.includes('[]')) {
+                    if (!borrador[key]) borrador[key] = [];
+                    borrador[key].push(value);
+                } else {
+                    borrador[key] = value;
+                }
+            }
+        }
+        // Guardamos las firmas si existen
+        let bMedico = document.getElementById('base64_firma_medico');
+        if(bMedico) borrador['base64_firma_medico'] = bMedico.value;
+        
+        let bPaciente = document.getElementById('base64_firma_paciente');
+        if(bPaciente) borrador['base64_firma_paciente'] = bPaciente.value;
+        
+        let bParamedico = document.getElementById('base64_firma_paramedico');
+        if(bParamedico) borrador['base64_firma_paramedico'] = bParamedico.value;
+        
+        let bMapa = document.getElementById('base64_mapa_lesiones');
+        if(bMapa) borrador['base64_mapa_lesiones'] = bMapa.value;
+
+        localStorage.setItem('frap_borrador', JSON.stringify(borrador));
+    }
+
+    function guardarBorrador() {
+        prepararEnvio(); 
+        autoGuardarFantasma();
+        saliendoSeguro = true; // Desactivamos la alerta anti-escape porque la salida es intencional
+        alert('💾 Borrador guardado con éxito.\n\nTodo tu progreso está seguro en el teléfono. Puedes cerrar la app y continuarlo cuando llegues a la base.');
+        window.location.href = 'dashboard.html';
+    }
+
+    function cargarBorrador(datos) {
+        if (datos['sv_hora[]'] && Array.isArray(datos['sv_hora[]'])) {
+            let cantidadTomas = datos['sv_hora[]'].length;
+            for (let i = 1; i < cantidadTomas; i++) { agregarSigno(); }
+        }
+
+        for (let key in datos) {
+            if (key === 'folio') continue; 
+
+            if (Array.isArray(datos[key])) {
+                let inputs = document.querySelectorAll(`[name="${key}"]`);
+                datos[key].forEach((valor, index) => { if (inputs[index]) inputs[index].value = valor; });
+            } else {
+                let input = document.querySelector(`[name="${key}"]`);
+                if (input) {
+                    if (input.type === 'radio' || input.type === 'checkbox') {
+                        let op = document.querySelector(`[name="${key}"][value="${datos[key]}"]`);
+                        if(op) { 
+                            op.checked = true; 
+                            if(key === 'rcp_iniciado') toggleRcp();
+                            if(key === 'gineco_aplica') toggleGineco();
+                            if(key === 'parto_aplica') toggleParto();
+                            if(key === 'quemados_aplica') toggleQuemados();
+                            if(key === 'intoxicacion_aplica') toggleIntoxicados();
+                        }
+                    } else {
+                        input.value = datos[key];
+                    }
+                }
+            }
+        }
+
+        if (datos['base64_firma_medico']) { document.getElementById('base64_firma_medico').value = datos['base64_firma_medico']; }
+        if (datos['base64_firma_paciente']) { document.getElementById('base64_firma_paciente').value = datos['base64_firma_paciente']; }
+        if (datos['base64_firma_paramedico']) { document.getElementById('base64_firma_paramedico').value = datos['base64_firma_paramedico']; }
+        if (datos['base64_mapa_lesiones']) {
+            let img = new Image();
+            img.onload = function() { 
+                ctxTrauma.clearRect(0, 0, canvasTrauma.width, canvasTrauma.height);
+                ctxTrauma.drawImage(img, 0, 0, canvasTrauma.width, canvasTrauma.height); 
+            };
+            img.src = datos['base64_mapa_lesiones'];
+            mapaModificado = true;
+            document.getElementById('base64_mapa_lesiones').value = datos['base64_mapa_lesiones'];
+        }
+
+        calcularGlasgow();
+        calcularApgar();
+        // Recalcular PAMs al cargar borrador
+        document.querySelectorAll('.signo-fila').forEach(row => {
+            let tasInput = row.querySelector('.pam-tas');
+            if(tasInput) tasInput.dispatchEvent(new Event('input', {bubbles:true}));
+        });
+    }
+
+    function abrirModalFirma(destino) {
+        destinoFirmaActual = destino;
+        var modal = new bootstrap.Modal(document.getElementById('modalFirmaFullscreen'));
+        modal.show();
+    }
+
+    document.getElementById('modalFirmaFullscreen').addEventListener('shown.bs.modal', function () {
+        const canvas = document.getElementById('canvasFirmaModal');
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        canvas.width = canvas.offsetWidth * ratio;
+        canvas.height = canvas.offsetHeight * ratio;
+        canvas.getContext("2d").scale(ratio, ratio);
+        if (padFirmaModal) padFirmaModal.off();
+        padFirmaModal = new SignaturePad(canvas, { backgroundColor: 'rgb(255, 255, 255)', penColor: 'rgb(0, 0, 0)' });
+        padFirmaModal.clear();
+    });
+
+    function limpiarFirmaModal() { if (padFirmaModal) padFirmaModal.clear(); }
+
+    // Función modificada para rotar la imagen si el lado derecho es la base
+    function guardarFirmaModal() {
+        if (padFirmaModal.isEmpty()) { alert("La firma está vacía."); return; }
+        const dataUrl = padFirmaModal.toDataURL('image/png');
+        
+        const img = new Image();
+        img.onload = function() {
+            // Si la imagen de la firma es más alta que ancha, rotarla automáticamente
+            if (img.height > img.width) {
+                const canvasTemp = document.createElement('canvas');
+                canvasTemp.width = img.height; 
+                canvasTemp.height = img.width;
+                const ctx = canvasTemp.getContext('2d');
+                
+                // Rotar -90 grados (antihorario) para alinear la firma en el PDF
+                ctx.translate(canvasTemp.width / 2, canvasTemp.height / 2);
+                ctx.rotate(-Math.PI / 2);
+                ctx.drawImage(img, -img.width / 2, -img.height / 2);
+                
+                procesarImagenFirma(canvasTemp.toDataURL('image/png'));
+            } else {
+                procesarImagenFirma(dataUrl);
+            }
+        };
+        img.src = dataUrl;
+    }
+
+    function procesarImagenFirma(imagenFinalB64) {
+        if (destinoFirmaActual === 'medico') { padMedico.fromDataURL(imagenFinalB64); document.getElementById('base64_firma_medico').value = imagenFinalB64; } 
+        else if (destinoFirmaActual === 'paciente') { padPaciente.fromDataURL(imagenFinalB64); document.getElementById('base64_firma_paciente').value = imagenFinalB64; } 
+        else if (destinoFirmaActual === 'paramedico') { padParamedico.fromDataURL(imagenFinalB64); document.getElementById('base64_firma_paramedico').value = imagenFinalB64; }
+        bootstrap.Modal.getInstance(document.getElementById('modalFirmaFullscreen')).hide();
+        autoGuardarFantasma(); // Guardamos el borrador cada vez que se firme
+    }
+
+    function toggleRcp() { document.getElementById('moduloRcp').style.display = document.getElementById('switchRcp').checked ? 'block' : 'none'; }
+    function toggleGineco() { document.getElementById('moduloGineco').style.display = document.getElementById('switchGineco').checked ? 'block' : 'none'; }
+    function toggleParto() { document.getElementById('moduloParto').style.display = document.getElementById('switchParto').checked ? 'block' : 'none'; }
+    function toggleQuemados() { document.getElementById('moduloQuemados').style.display = document.getElementById('switchQuemados').checked ? 'block' : 'none'; }
+    function toggleIntoxicados() { document.getElementById('moduloIntoxicados').style.display = document.getElementById('switchIntoxicados').checked ? 'block' : 'none'; }
+    
+    function calcularGlasgow() {
+        let ocular = parseInt(document.getElementById('gcs_ocular').value) || 0;
+        let verbal = parseInt(document.getElementById('gcs_verbal').value) || 0;
+        let motora = parseInt(document.getElementById('gcs_motora').value) || 0;
+        let total = 0; let campoSeveridad = document.getElementById('gcs_severidad');
+        if(ocular > 0 && verbal > 0 && motora > 0) {
+            total = ocular + verbal + motora;
+            document.getElementById('gcs_total').value = total;
+            if(total >= 13) { campoSeveridad.value = "Leve"; campoSeveridad.style.color = "green"; } 
+            else if (total >= 9) { campoSeveridad.value = "Moderado"; campoSeveridad.style.color = "orange"; } 
+            else { campoSeveridad.value = "Severo"; campoSeveridad.style.color = "red"; }
+        } else { document.getElementById('gcs_total').value = ""; campoSeveridad.value = ""; }
+        
+        // Disparar cálculo de Trauma Score al cambiar Glasgow
+        calcularTraumaScore();
+    }
+
+    // CALCULADORA INTELIGENTE RTS (TRAUMA SCORE)
+    function calcularTraumaScore() {
+        let gcs = parseInt(document.getElementById('gcs_total').value);
+        let tasInput = document.querySelector('[name="sv_tas[]"]');
+        let frInput = document.querySelector('[name="sv_fr[]"]');
+        
+        let tas = tasInput && tasInput.value !== '' ? parseFloat(tasInput.value) : NaN;
+        let fr = frInput && frInput.value !== '' ? parseFloat(frInput.value) : NaN;
+
+        let tsTotal = document.getElementById('trauma_score_total');
+        let tsEval = document.getElementById('trauma_score_eval');
+
+        if(!isNaN(gcs) && !isNaN(tas) && !isNaN(fr) && tsTotal) {
+            // Reglas de RTS (Trauma Score Revisado)
+            let ptsGCS = (gcs >= 13) ? 4 : (gcs >= 9) ? 3 : (gcs >= 6) ? 2 : (gcs >= 4) ? 1 : 0;
+            let ptsTAS = (tas > 89) ? 4 : (tas >= 76) ? 3 : (tas >= 50) ? 2 : (tas > 0) ? 1 : 0;
+            let ptsFR = (fr >= 10 && fr <= 29) ? 4 : (fr > 29) ? 3 : (fr >= 6) ? 2 : (fr > 0) ? 1 : 0;
+            
+            let rts = ptsGCS + ptsTAS + ptsFR;
+            tsTotal.value = rts;
+            
+            if(rts === 12) { tsEval.value = "Leve (> 99%)"; tsEval.style.color = "green"; }
+            else if(rts >= 11) { tsEval.value = "Moderado (~ 96%)"; tsEval.style.color = "orange"; }
+            else { tsEval.value = "Grave (< 87%)"; tsEval.style.color = "red"; }
+        } else if(tsTotal) {
+            tsTotal.value = ""; tsEval.value = "";
+        }
+    }
+
+    function calcularApgar() {
+        let fc = parseInt(document.getElementById('apgar_fc').value) || 0;
+        let resp = parseInt(document.getElementById('apgar_resp').value) || 0;
+        let tono = parseInt(document.getElementById('apgar_tono').value) || 0;
+        let reflejo = parseInt(document.getElementById('apgar_reflejo').value) || 0;
+        let color = parseInt(document.getElementById('apgar_color').value) || 0;
+        
+        let total = fc + resp + Math.min(tono, 2) + Math.min(reflejo, 2) + Math.min(color, 2);
+        document.getElementById('apgar_total').value = total;
+        
+        let campoEval = document.getElementById('apgar_eval');
+        if (total >= 7) {
+            campoEval.value = "Normal / Sin depresión";
+            campoEval.style.color = "green";
+        } else if (total >= 4) {
+            campoEval.value = "Depresión moderada";
+            campoEval.style.color = "orange";
+        } else {
+            campoEval.value = "Depresión severa";
+            campoEval.style.color = "red";
+        }
+    }
+
+    // CAPA 1: NAVEGACIÓN NATIVA (Secuestro del botón físico "Atrás")
+    window.addEventListener('popstate', function(event) {
+        if (event.state && event.state.paso) {
+            cambiarPasoVisual(event.state.paso);
+        } else {
+            cambiarPasoVisual(1);
+        }
+    });
+
+    // Esta función actualiza la URL y llama al cambio visual
+    function cambiarPaso(pasoDestino) {
+        cambiarPasoVisual(pasoDestino);
+        try {
+            history.pushState({ paso: pasoDestino }, "Paso " + pasoDestino, "#paso" + pasoDestino);
+        } catch(e) { console.log("History API bloqueada:", e); }
+    }
+
+    // Esta función solo cambia la vista sin tocar la URL
+    function cambiarPasoVisual(pasoDestino) {
+        document.querySelectorAll('.frap-step').forEach(el => el.classList.remove('active'));
+        let pasoEl = document.getElementById('paso' + pasoDestino);
+        if (pasoEl) {
+            pasoEl.classList.add('active');
+        }
+        window.scrollTo(0, 0);
+
+        if(pasoDestino === 5) {
+            ajustarCanvasFirma(document.getElementById('firmaMedico'), padMedico, 'base64_firma_medico');
+        }
+        if(pasoDestino === 6) {
+            ajustarCanvasFirma(document.getElementById('firmaPaciente'), padPaciente, 'base64_firma_paciente');
+            ajustarCanvasFirma(document.getElementById('firmaParamedico'), padParamedico, 'base64_firma_paramedico');
+        }
+    }
+
+    function ajustarCanvasFirma(canvas, pad, hiddenInputId) {
+        if (!canvas || canvas.dataset.ajustado === "si") return;
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        canvas.width = canvas.offsetWidth * ratio; 
+        canvas.height = canvas.offsetHeight * ratio;
+        canvas.getContext("2d").scale(ratio, ratio); 
+        pad.clear(); 
+        canvas.dataset.ajustado = "si"; 
+
+        let hiddenInput = document.getElementById(hiddenInputId);
+        if (hiddenInput && hiddenInput.value) {
+            pad.fromDataURL(hiddenInput.value);
+        }
+    }
+
+    function agregarSigno() {
+        const contenedor = document.getElementById('contenedor-signos');
+        const nuevaFila = contenedor.querySelector('.signo-fila').cloneNode(true);
+        nuevaFila.querySelectorAll('input').forEach(input => input.value = '');
+        contenedor.appendChild(nuevaFila);
+    }
+
+    canvasTrauma.addEventListener('click', function(e) {
+        const rect = canvasTrauma.getBoundingClientRect();
+        const x = (e.clientX - rect.left) * (canvasTrauma.width / rect.width);
+        const y = (e.clientY - rect.top) * (canvasTrauma.height / rect.height);
+        const tipoLesion = prompt("Ingresa la letra de la lesión (Ej. D=Dolor, Fx=Fractura):");
+        if(tipoLesion) {
+            mapaModificado = true; ctxTrauma.beginPath(); ctxTrauma.arc(x, y, 6, 0, 2 * Math.PI);
+            ctxTrauma.fillStyle = "red"; ctxTrauma.fill(); ctxTrauma.fillStyle = "black";
+            ctxTrauma.font = "bold 14px sans-serif"; ctxTrauma.fillText(tipoLesion.trim().substring(0, 3), x + 8, y + 5);
+            autoGuardarFantasma(); // Auto-guardamos cada marca
+        }
+    });
+
+    function limpiarMapa() { 
+        ctxTrauma.clearRect(0, 0, canvasTrauma.width, canvasTrauma.height); 
+        let imgSilueta = new Image(); imgSilueta.src = 'silueta.png';
+        imgSilueta.onload = function() { ctxTrauma.drawImage(imgSilueta, 0, 0, canvasTrauma.width, canvasTrauma.height); };
+        mapaModificado = false; 
+        document.getElementById('base64_mapa_lesiones').value = '';
+        autoGuardarFantasma();
+    }
+
+    function prepararEnvio() {
+        if (mapaModificado) { document.getElementById('base64_mapa_lesiones').value = canvasTrauma.toDataURL('image/png'); }
+        if (!padMedico.isEmpty()) { document.getElementById('base64_firma_medico').value = padMedico.toDataURL('image/png'); }
+        if (!padPaciente.isEmpty()) { document.getElementById('base64_firma_paciente').value = padPaciente.toDataURL('image/png'); }
+        if (!padParamedico.isEmpty()) { document.getElementById('base64_firma_paramedico').value = padParamedico.toDataURL('image/png'); }
+    }
+
+    document.getElementById('frapForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        prepararEnvio();
+
+        saliendoSeguro = true; // Salida permitida porque ya terminó
+        localStorage.removeItem('frap_borrador');
+
+        const boton = document.querySelector('button[type="submit"]');
+        boton.disabled = true;
+        boton.innerHTML = "Guardando... 💾";
+
+        // 1) SIEMPRE se guarda primero en el dispositivo (IndexedDB), pase lo
+        //    que pase con la red. Esto es lo que garantiza que nunca se pierda
+        //    un FRAP, ni siquiera si la conexión se cae a la mitad del envío.
+        let formData = new FormData(this);
+        let datosFrap = {};
+        for (let [key, value] of formData.entries()) {
+            if (key.includes('[]')) {
+                if (!datosFrap[key]) datosFrap[key] = [];
+                datosFrap[key].push(value);
+            } else {
+                datosFrap[key] = value;
+            }
+        }
+        await guardarPendiente(datosFrap);
+
+        // 2) Intentamos enviarlo de una vez. Si funciona, se sincroniza y
+        //    desaparece de la cola casi al instante.
+        boton.innerHTML = "Enviando... 🚀";
+        await sincronizarPendientes();
+
+        const quedanPendientes = await contarPendientes();
+        if (quedanPendientes > 0) {
+            alert('⚠️ Sin conexión por ahora. La FRAP quedó guardada de forma segura en el teléfono y se enviará sola en cuanto regrese la señal (no cierres la app hasta ver la confirmación).');
+        } else {
+            alert('✅ FRAP enviada con éxito.');
+        }
+        window.location.href = 'dashboard.html';
+    });
+
+    iniciarListenersDeRed();
+</script>
+<script>
+    // --- Cargar folio y nombre del paramédico ---
+    // Se piden a la API en línea. Si no hay conexión, NO se intenta adivinar
+    // el folio real (podría chocar con folios que otros compañeros generen
+    // mientras tanto) — se deja un marcador "PENDIENTE" que offline-sync.js
+    // reemplaza por el folio real justo antes de enviar la FRAP, ya con señal.
+    async function cargarDatosFolio() {
+        const cacheKey = 'ultimo_folio_cache';
+        try {
+            const resp = await fetch(API_BASE + '/api/folio.php', { credentials: 'include' });
+            if (!resp.ok) throw new Error('sin sesión o sin red');
+            const datos = await resp.json();
+            if (datos.success) {
+                document.getElementById('campoFolio').value = datos.folio;
+                document.getElementById('campoJefe').value = 'Jefe: ' + datos.nombre_paramedico;
+                localStorage.setItem(cacheKey, JSON.stringify(datos));
+                return;
+            }
+        } catch (err) { /* seguimos al respaldo de abajo */ }
+
+        const cache = localStorage.getItem(cacheKey);
+        document.getElementById('campoFolio').value = 'PENDIENTE-' + Date.now();
+        document.getElementById('avisoFolioOffline').style.display = 'block';
+        document.getElementById('campoJefe').value = cache ? ('Jefe: ' + JSON.parse(cache).nombre_paramedico) : 'Jefe: (sin datos en caché)';
+    }
+    cargarDatosFolio();
+
+    async function cerrarSesionYSalir() {
+        try { await fetch(API_BASE + '/api/logout.php', { method: 'POST', credentials: 'include' }); } catch (err) {}
+        localStorage.removeItem('dashboard_cache');
+        window.location.href = 'login.html';
+    }
+</script>
+</body>
+</html>

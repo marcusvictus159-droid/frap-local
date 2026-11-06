@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FRAP Digital">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Checklist Diario</title>
+    <meta name="theme-color" content="#198754">
+    <link href="vendor/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="vendor/bootstrap-icons.css">
+    <style>
+        :root { --verde: #198754; }
+        body { background-color: #f4f6f9; font-family: system-ui, -apple-system, sans-serif; }
+        .bg-verde { background-color: var(--verde) !important; color: white; }
+        .navbar { padding-top: calc(0.5rem + var(--status-bar-height, 24px)) !important; }
+        .card-section { background: white; border-radius: 16px; padding: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 16px; }
+        .section-title { font-weight: bold; font-size: 0.95rem; margin-bottom: 10px; color: #333; }
+        .item-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+        .item-row:last-child { border-bottom: none; }
+        .item-label { font-size: 0.9rem; flex: 1; padding-right: 10px; }
+        .toggle-si-no { display: flex; gap: 6px; }
+        .btn-toggle { border: 2px solid #ddd; background: white; border-radius: 8px; width: 42px; height: 36px; font-weight: bold; }
+        .btn-toggle.activo-si { background: #d1e7dd; border-color: #198754; color: #0f5132; }
+        .btn-toggle.activo-no { background: #f8d7da; border-color: #dc3545; color: #842029; }
+        .evidencia-box { border: 2px dashed #ccc; border-radius: 12px; padding: 14px; text-align: center; margin-bottom: 12px; }
+        .evidencia-box.tiene-archivo { border-color: var(--verde); background: #f0fff4; }
+        .preview-img { max-width: 100%; max-height: 120px; border-radius: 8px; margin-top: 8px; }
+    </style>
+    <script src="app-config.js"></script>
+    <script src="local-core.js"></script>
+    <script src="offline-sync.js"></script>
+</head>
+<body>
+
+    <nav class="navbar navbar-dark bg-verde mb-4 shadow-sm">
+        <div class="container d-flex justify-content-between align-items-center">
+            <span class="navbar-brand mb-0 h1 fw-bold fs-5"><i class="bi bi-clipboard2-check-fill"></i> Checklist Diario</span>
+            <div class="d-flex align-items-center gap-3">
+                <a href="ajustes.html" class="text-white text-decoration-none position-relative" aria-label="Ajustes">
+                    <i class="bi bi-gear-fill fs-4"></i>
+                    <span id="badgePend" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark" style="display:none;">0</span>
+                </a>
+                <a href="#" id="btnLogout" class="text-white text-decoration-none"><i class="bi bi-box-arrow-right fs-4"></i></a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container pb-5" style="max-width: 520px;">
+
+        <div id="avisoOffline" class="alert alert-warning py-2 small text-center" style="display:none;">
+            <i class="bi bi-wifi-off"></i> Sin conexión — se guardará en el teléfono y se enviará solo al recuperar señal.
+        </div>
+
+        <div class="text-center mb-3">
+            <h5 class="fw-bold mb-0">¡Hola, <span id="txtNombreOperador">...</span>!</h5>
+            <p class="text-muted small">Checklist de la unidad de hoy</p>
+        </div>
+
+        <form id="formChecklist">
+            <div id="contenedorSecciones"></div>
+
+            <div class="card-section">
+                <div class="section-title">📝 Observaciones</div>
+                <textarea class="form-control" id="observaciones" rows="3" placeholder="Anota cualquier detalle o falla encontrada..."></textarea>
+            </div>
+
+            <div class="card-section">
+                <div class="section-title">📸 Evidencia</div>
+
+                <label class="small fw-bold d-block mb-1">Video de ambulancia funcionando</label>
+                <div class="evidencia-box" id="cajaVideo">
+                    <input type="file" accept="video/*" capture="environment" id="inputVideo" class="d-none">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('inputVideo').click()"><i class="bi bi-camera-video"></i> Grabar video</button>
+                    <div id="statusVideo" class="small text-muted mt-1"></div>
+                </div>
+
+                <label class="small fw-bold d-block mb-1">Foto de gasolina</label>
+                <div class="evidencia-box" id="cajaFotoGas">
+                    <input type="file" accept="image/*" capture="environment" id="inputFotoGas" class="d-none">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('inputFotoGas').click()"><i class="bi bi-camera-fill"></i> Tomar foto</button>
+                    <div id="statusFotoGas" class="small text-muted mt-1"></div>
+                    <img id="previewFotoGas" class="preview-img" style="display:none;">
+                </div>
+
+                <label class="small fw-bold d-block mb-1">Foto de kilometraje</label>
+                <div class="evidencia-box" id="cajaFotoKm">
+                    <input type="file" accept="image/*" capture="environment" id="inputFotoKm" class="d-none">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('inputFotoKm').click()"><i class="bi bi-camera-fill"></i> Tomar foto</button>
+                    <div id="statusFotoKm" class="small text-muted mt-1"></div>
+                    <img id="previewFotoKm" class="preview-img" style="display:none;">
+                </div>
+            </div>
+
+            <button type="submit" id="btnEnviar" class="btn w-100 fw-bold" style="background-color:var(--verde); color:white; border-radius:10px; padding:14px; font-size:1.05rem;">
+                <i class="bi bi-send-check-fill"></i> Enviar Checklist
+            </button>
+        </form>
+    </div>
+
+    <script>
+        const SECCIONES = {
+            '🚑 UNIDAD': [
+                ['gasolina_validada', 'Gasolina validada'],
+                ['kilometraje_reportado', 'Kilometraje reportado'],
+                ['llaves_completas', 'Llaves completas'],
+            ],
+            '🔧 REVISIÓN MECÁNICA': [
+                ['aceite_revisado', 'Aceite revisado'],
+                ['anticongelante_revisado', 'Anticongelante revisado'],
+                ['liquido_frenos', 'Líquido de frenos'],
+                ['bateria_funcionando', 'Batería funcionando'],
+                ['llantas_buen_estado', 'Llantas en buen estado'],
+                ['refaccion_completa', 'Refacción + gato + llave'],
+            ],
+            '🚨 LUCES Y EMERGENCIA': [
+                ['luces_funcionando', 'Luces funcionando'],
+                ['direccionales_funcionando', 'Direccionales funcionando'],
+                ['torretas_funcionando', 'Torretas funcionando'],
+                ['sirena_funcionando', 'Sirena funcionando'],
+                ['megafono_funcionando', 'Megáfono funcionando'],
+                ['camara_reversa_funcionando', 'Cámara de reversa'],
+            ],
+            '🧼 LIMPIEZA Y BIOSEGURIDAD': [
+                ['ambulancia_lavada', 'Ambulancia lavada'],
+                ['cabina_limpia', 'Cabina limpia'],
+                ['area_medica_sanitizada', 'Área médica sanitizada'],
+                ['camilla_limpia', 'Camilla limpia y funcional'],
+                ['tanques_oxigeno_revisados', 'Tanques de oxígeno revisados'],
+                ['equipo_medico_completo', 'Equipo médico completo'],
+                ['rpbi_validado', 'RPBI validado'],
+            ],
+            '📑 DOCUMENTACIÓN': [
+                ['tarjeta_circulacion', 'Tarjeta de circulación'],
+                ['seguro_vigente', 'Seguro vigente'],
+                ['bitacora_actualizada', 'Bitácora actualizada'],
+                ['extintor_vigente', 'Extintor vigente'],
+            ],
+        };
+
+        const valores = {};
+
+        function construirSecciones() {
+            const cont = document.getElementById('contenedorSecciones');
+            for (const titulo in SECCIONES) {
+                const box = document.createElement('div');
+                box.className = 'card-section';
+                let html = `<div class="section-title">${titulo}</div>`;
+                SECCIONES[titulo].forEach(([campo, etiqueta]) => {
+                    valores[campo] = null;
+                    html += `
+                    <div class="item-row">
+                        <span class="item-label">${etiqueta}</span>
+                        <div class="toggle-si-no">
+                            <button type="button" class="btn-toggle" id="si_${campo}" onclick="marcar('${campo}', true)">✅</button>
+                            <button type="button" class="btn-toggle" id="no_${campo}" onclick="marcar('${campo}', false)">❌</button>
+                        </div>
+                    </div>`;
+                });
+                box.innerHTML = html;
+                cont.appendChild(box);
+            }
+        }
+
+        function marcar(campo, valor) {
+            valores[campo] = valor;
+            document.getElementById('si_' + campo).classList.toggle('activo-si', valor === true);
+            document.getElementById('no_' + campo).classList.toggle('activo-no', valor === false);
+        }
+
+        construirSecciones();
+
+        function archivoABase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        let mediaBase64 = { video: null, fotoGas: null, fotoKm: null };
+
+        document.getElementById('inputVideo').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            document.getElementById('statusVideo').textContent = 'Procesando...';
+            mediaBase64.video = await archivoABase64(file);
+            document.getElementById('cajaVideo').classList.add('tiene-archivo');
+            document.getElementById('statusVideo').textContent = '✓ Video listo (' + (file.size / 1024 / 1024).toFixed(1) + ' MB)';
+        });
+
+        document.getElementById('inputFotoGas').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            mediaBase64.fotoGas = await archivoABase64(file);
+            document.getElementById('cajaFotoGas').classList.add('tiene-archivo');
+            document.getElementById('statusFotoGas').textContent = '✓ Foto lista';
+            const img = document.getElementById('previewFotoGas');
+            img.src = mediaBase64.fotoGas; img.style.display = 'block';
+        });
+
+        document.getElementById('inputFotoKm').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            mediaBase64.fotoKm = await archivoABase64(file);
+            document.getElementById('cajaFotoKm').classList.add('tiene-archivo');
+            document.getElementById('statusFotoKm').textContent = '✓ Foto lista';
+            const img = document.getElementById('previewFotoKm');
+            img.src = mediaBase64.fotoKm; img.style.display = 'block';
+        });
+
+        async function nombreSesion() {
+            const cache = localStorage.getItem('dashboard_cache');
+            if (cache) return JSON.parse(cache).nombre_completo || '';
+            try {
+                const resp = await fetch(API_BASE + '/api/session.php', { credentials: 'include' });
+                const datos = await resp.json();
+                return datos.success ? datos.nombre_completo : '';
+            } catch (err) { return ''; }
+        }
+
+        (async () => {
+            if (!(await hayConexionReal())) {
+                document.getElementById('avisoOffline').style.display = 'block';
+            }
+            document.getElementById('txtNombreOperador').textContent = await nombreSesion();
+        })();
+
+        document.getElementById('formChecklist').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const boton = document.getElementById('btnEnviar');
+            boton.disabled = true;
+            boton.innerHTML = 'Guardando...';
+
+            const datos = {
+                operador: document.getElementById('txtNombreOperador').textContent,
+                observaciones: document.getElementById('observaciones').value,
+                video_ambulancia: mediaBase64.video,
+                foto_gasolina: mediaBase64.fotoGas,
+                foto_kilometraje: mediaBase64.fotoKm,
+            };
+            for (const campo in valores) {
+                datos[campo] = valores[campo] === true;
+            }
+
+            await guardarPendiente(datos, 'checklist');
+            await sincronizarPendientes();
+
+            boton.innerHTML = '✓ Checklist guardado';
+            setTimeout(() => {
+                document.getElementById('formChecklist').reset();
+                Object.keys(valores).forEach(campo => marcar(campo, null));
+                mediaBase64 = { video: null, fotoGas: null, fotoKm: null };
+                document.querySelectorAll('.evidencia-box').forEach(b => b.classList.remove('tiene-archivo'));
+                document.querySelectorAll('.preview-img').forEach(i => i.style.display = 'none');
+                boton.disabled = false;
+                boton.innerHTML = '<i class="bi bi-send-check-fill"></i> Enviar Checklist';
+            }, 1500);
+        });
+
+        document.getElementById('btnLogout').addEventListener('click', async (e) => {
+            e.preventDefault();
+            try { await fetch(API_BASE + '/api/logout.php', { method: 'POST', credentials: 'include' }); } catch (err) {}
+            localStorage.removeItem('dashboard_cache');
+            localStorage.removeItem('home_screen');
+            window.location.href = 'login.html';
+        });
+
+        iniciarListenersDeRed();
+
+        async function pintarPendientes() {
+            try {
+                const n = await LocalApp.Outbox.contar();
+                const badge = document.getElementById('badgePend');
+                badge.textContent = n; badge.style.display = n > 0 ? 'inline-block' : 'none';
+            } catch (e) { /* sin indicador */ }
+        }
+        function reintentarEnvios() { LocalApp.Outbox.enviarPendientes().then(pintarPendientes); }
+        window.addEventListener('online', reintentarEnvios);
+        setInterval(reintentarEnvios, 30000);
+        pintarPendientes();
+        reintentarEnvios();
+    </script>
+</body>
+</html>

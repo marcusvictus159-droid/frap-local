@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FRAP Digital">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Dashboard CRM</title>
+
+    <meta name="theme-color" content="#cc0000">
+    <link href="vendor/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="vendor/bootstrap-icons.css">
+    <script src="vendor/html5-qrcode.min.js"></script>
+
+    <style>
+        :root { --cruz-red: #cc0000; --cruz-dark: #990000; }
+        body {
+            background-color: #f4f6f9;
+            font-family: system-ui, -apple-system, sans-serif;
+            -webkit-user-select: none; user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .bg-cruz { background-color: var(--cruz-red) !important; color: white; }
+        .navbar { padding-top: calc(0.5rem + var(--status-bar-height, 24px)) !important; }
+        .text-cruz { color: var(--cruz-red) !important; }
+        .btn-menu {
+            border: none; border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transition: all 0.2s ease-in-out;
+            background: white;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+        }
+        .btn-menu:active { transform: scale(0.96); box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+        .icon-box { font-size: 3rem; margin-bottom: 8px; }
+        #reader { width: 100%; max-width: 400px; margin: 0 auto; border-radius: 12px; overflow: hidden; border: none !important; }
+        #reader video { border-radius: 12px; object-fit: cover; }
+        .alerta-guardia { border-left: 6px solid #ff9800; border-radius: 12px; }
+    </style>
+    <script src="offline-sync.js"></script>
+    <script src="app-config.js"></script>
+    <script src="local-core.js"></script>
+</head>
+<body>
+
+    <nav class="navbar navbar-dark bg-cruz mb-4 shadow-sm">
+        <div class="container d-flex justify-content-between">
+            <span class="navbar-brand mb-0 h1 fw-bold"><i class="bi bi-heart-pulse-fill"></i> CRM Digital</span>
+            <div class="d-flex align-items-center gap-3">
+                <a href="ajustes.html" class="text-white text-decoration-none position-relative" aria-label="Ajustes">
+                    <i class="bi bi-gear-fill fs-4"></i>
+                    <span id="badgePend" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark" style="display:none;">0</span>
+                </a>
+                <a href="perfil.html" class="text-white text-decoration-none"><i class="bi bi-person-circle fs-4"></i></a>
+                <a href="#" id="btnLogout" class="text-white text-decoration-none"><i class="bi bi-box-arrow-right fs-4"></i></a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container pb-5" style="max-width: 500px;">
+
+        <div class="mb-4 text-center">
+            <h2 class="fw-bold text-dark">¡Hola, <span id="txtPrimerNombre">...</span>!</h2>
+            <p class="text-muted">Centro de Operaciones</p>
+        </div>
+
+        <div id="avisoTg" class="alert alert-warning border-0 shadow-sm small" style="display:none;">
+            <i class="bi bi-telegram"></i> Este teléfono aún no está vinculado a Telegram. Lo que registres se guarda aquí y se enviará al vincularlo.
+            <a href="ajustes.html" class="alert-link">Vincular ahora</a>
+        </div>
+
+        <div id="alertaGuardia" class="alert bg-white shadow-sm alerta-guardia text-center mb-4" style="display:none;">
+            <div class="text-warning mb-1"><i class="bi bi-broadcast-pin fs-3"></i></div>
+            <h6 class="fw-bold text-dark mb-1">Turno Activo</h6>
+            <p class="mb-0 text-muted small">Tiempo transcurrido:</p>
+            <div id="contador-guardia" class="fw-bold fs-3 text-danger font-monospace">00:00:00</div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-6">
+                <button type="button" id="btnGuardia" class="card w-100 h-100 p-3 text-center btn-menu" data-bs-toggle="modal" data-bs-target="#qrModal" onclick="iniciarEscaner()">
+                    <div class="text-primary icon-box" id="iconGuardia"><i class="bi bi-qr-code-scan"></i></div>
+                    <span class="fw-bold text-dark fs-6" id="txtGuardia">Marcar<br>Entrada</span>
+                </button>
+            </div>
+
+            <div class="col-6">
+                <a href="frap.html" class="card w-100 h-100 p-3 text-center text-decoration-none btn-menu">
+                    <div class="text-cruz icon-box"><i class="bi bi-file-earmark-medical-fill"></i></div>
+                    <span class="fw-bold text-dark fs-6">Crear<br>FRAP</span>
+                </a>
+            </div>
+
+            <div class="col-6">
+                <a href="historial.html#guardias" class="card w-100 h-100 p-3 text-center text-decoration-none btn-menu">
+                    <div class="text-secondary icon-box"><i class="bi bi-clock-history"></i></div>
+                    <span class="fw-bold text-dark fs-6">Historial<br>Guardias</span>
+                </a>
+            </div>
+
+            <div class="col-6">
+                <a href="historial.html#fraps" class="card w-100 h-100 p-3 text-center text-decoration-none btn-menu">
+                    <div class="text-success icon-box"><i class="bi bi-folder2-open"></i></div>
+                    <span class="fw-bold text-dark fs-6">FRAPs<br>Generadas</span>
+                </a>
+            </div>
+
+            <div class="col-12">
+                <a href="servicio.html" class="card w-100 p-3 text-center text-decoration-none btn-menu" style="flex-direction: row; justify-content: start;">
+                    <div class="icon-box mb-0 me-3" style="color: #cc0000;"><i class="bi bi-truck"></i></div>
+                    <div class="text-start">
+                        <span class="fw-bold text-dark fs-5 d-block">Salida a Servicio</span>
+                        <small class="text-muted">Registrar salida y cierre de unidad</small>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-12">
+                <a href="calculadoras.html" class="card w-100 p-3 text-center text-decoration-none btn-menu" style="flex-direction: row; justify-content: start;">
+                    <div class="icon-box mb-0 me-3" style="color: #6f42c1;"><i class="bi bi-calculator-fill"></i></div>
+                    <div class="text-start">
+                        <span class="fw-bold text-dark fs-5 d-block">Herramientas Médicas</span>
+                        <small class="text-muted">Calculadoras, Goteo, Glasgow...</small>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <div id="avisoOffline" class="text-center text-muted small mt-4" style="display:none;">
+            <i class="bi bi-cloud-slash"></i> Mostrando datos guardados (sin conexión)
+        </div>
+    </div>
+
+    <div class="modal fade" id="qrModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 16px; overflow: hidden;">
+                <div class="modal-header bg-dark text-white border-0">
+                    <h5 class="modal-title"><i class="bi bi-camera-video"></i> Escanear Guardia</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" onclick="detenerEscaner()"></button>
+                </div>
+                <div class="modal-body text-center bg-light">
+                    <p class="text-muted small mb-3" id="txtInstruccionQR">Escanea el código de la base para iniciar tu turno.</p>
+                    <div id="reader" class="shadow-sm"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="vendor/bootstrap.bundle.min.js"></script>
+    <script>
+        let enGuardia = false;
+        let segundosTranscurridos = 0;
+        let intervaloContador = null;
+
+        function pintarEstadoGuardia() {
+            document.getElementById('alertaGuardia').style.display = enGuardia ? 'block' : 'none';
+            document.getElementById('iconGuardia').innerHTML = enGuardia
+                ? '<i class="bi bi-stop-circle-fill"></i>' : '<i class="bi bi-qr-code-scan"></i>';
+            document.getElementById('iconGuardia').className = 'icon-box ' + (enGuardia ? 'text-warning' : 'text-primary');
+            document.getElementById('txtGuardia').innerHTML = enGuardia ? 'Marcar<br>Salida' : 'Marcar<br>Entrada';
+            document.getElementById('btnGuardia').className = 'card w-100 h-100 p-3 text-center btn-menu' + (enGuardia ? ' bg-warning bg-opacity-10' : '');
+            document.getElementById('txtInstruccionQR').textContent = enGuardia
+                ? 'Escanea el código de la base para cerrar tu turno.'
+                : 'Escanea el código de la base para iniciar tu turno.';
+
+            if (intervaloContador) clearInterval(intervaloContador);
+            if (enGuardia) {
+                intervaloContador = setInterval(function () {
+                    segundosTranscurridos++;
+                    let h = Math.floor(segundosTranscurridos / 3600);
+                    let m = Math.floor((segundosTranscurridos % 3600) / 60);
+                    let s = segundosTranscurridos % 60;
+                    document.getElementById('contador-guardia').innerText =
+                        (h < 10 ? "0" + h : h) + ":" + (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+                }, 1000);
+            }
+        }
+
+        async function cargarDashboard() {
+            // Primero pintamos lo último que teníamos guardado, para que se
+            // vea algo de inmediato aunque no haya conexión.
+            const cache = localStorage.getItem('dashboard_cache');
+            if (cache) {
+                const datos = JSON.parse(cache);
+                document.getElementById('txtPrimerNombre').textContent = datos.primer_nombre;
+                enGuardia = datos.en_guardia;
+                segundosTranscurridos = datos.segundos_transcurridos;
+                pintarEstadoGuardia();
+            }
+
+            try {
+                const resp = await fetch(API_BASE + '/api/session.php', { credentials: 'include' });
+                if (!resp.ok) throw new Error('sin sesión');
+                const datos = await resp.json();
+                if (!datos.success) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+                document.getElementById('txtPrimerNombre').textContent = datos.primer_nombre;
+                enGuardia = datos.en_guardia;
+                segundosTranscurridos = datos.segundos_transcurridos;
+                pintarEstadoGuardia();
+                localStorage.setItem('dashboard_cache', JSON.stringify(datos));
+                document.getElementById('avisoOffline').style.display = 'none';
+            } catch (err) {
+                if (cache) {
+                    document.getElementById('avisoOffline').style.display = 'block';
+                } else {
+                    // No hay ni conexión ni caché: no podemos saber ni el nombre.
+                    document.getElementById('txtPrimerNombre').textContent = 'Paramédico';
+                }
+            }
+        }
+
+        document.getElementById('btnLogout').addEventListener('click', async (e) => {
+            e.preventDefault();
+            try { await fetch(API_BASE + '/api/logout.php', { method: 'POST', credentials: 'include' }); } catch (err) {}
+            localStorage.removeItem('dashboard_cache');
+            localStorage.removeItem('home_screen');
+            window.location.href = 'login.html';
+        });
+
+        let html5QrCode;
+
+        function iniciarEscaner() {
+            html5QrCode = new Html5Qrcode("reader");
+            html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                onScanSuccess, onScanFailure
+            ).catch(err => {
+                alert("Por favor, permite el acceso a la cámara trasera para continuar.");
+            });
+        }
+
+        function detenerEscaner() {
+            if (html5QrCode && html5QrCode.isScanning) {
+                html5QrCode.stop().then(() => { html5QrCode.clear(); }).catch((err) => console.error(err));
+            }
+        }
+
+        function onScanSuccess(decodedText) {
+            detenerEscaner();
+            bootstrap.Modal.getInstance(document.getElementById('qrModal')).hide();
+
+            let baseName = decodedText;
+            if (decodedText.includes('base=')) {
+                let url = new URL(decodedText);
+                baseName = url.searchParams.get('base');
+            }
+
+            let formData = new FormData();
+            formData.append('qr_code', baseName);
+            document.body.style.cursor = 'wait';
+
+            fetch(API_BASE + '/procesar_guardia.php', { method: 'POST', body: formData, credentials: 'include' })
+                .then(response => response.json())
+                .then(data => {
+                    document.body.style.cursor = 'default';
+                    if (data.status === 'error') alert("❌ " + data.msg);
+                    else { alert("✅ " + data.msg); cargarDashboard(); }
+                })
+                .catch(() => {
+                    document.body.style.cursor = 'default';
+                    alert("❌ Error de red, revisa tu conexión.");
+                });
+        }
+
+        function onScanFailure(error) { }
+
+        async function pintarIndicadoresEnvio() {
+            try {
+                const n = await LocalApp.Outbox.contar();
+                const badge = document.getElementById('badgePend');
+                badge.textContent = n; badge.style.display = n > 0 ? 'inline-block' : 'none';
+                document.getElementById('avisoTg').style.display = LocalApp.TG.configurado() ? 'none' : 'block';
+            } catch (e) { /* sin indicadores */ }
+        }
+        function reintentarEnvios() { LocalApp.Outbox.enviarPendientes().then(pintarIndicadoresEnvio); }
+        window.addEventListener('online', reintentarEnvios);
+        setInterval(reintentarEnvios, 30000);
+
+        if (typeof iniciarListenersDeRed === 'function') iniciarListenersDeRed();
+        cargarDashboard();
+        pintarIndicadoresEnvio();
+        reintentarEnvios();
+    </script>
+</body>
+</html>

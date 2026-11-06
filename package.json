@@ -1,0 +1,26 @@
+{
+  "name": "frap-digital-local",
+  "version": "1.0.0",
+  "private": true,
+  "description": "FRAP Digital - Cruz Roja Mexicana Huatulco. App local (sin servidor) que envia a Telegram.",
+  "scripts": {
+    "vendor": "node scripts/preparar-vendor.mjs"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/app": "^7.0.0",
+    "@capacitor/camera": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/filesystem": "^7.0.0",
+    "@capacitor/network": "^7.0.0",
+    "@capacitor/share": "^7.0.0",
+    "bootstrap": "5.3.3",
+    "bootstrap-icons": "1.11.3",
+    "html5-qrcode": "2.3.8",
+    "pdf-lib": "1.17.1",
+    "signature_pad": "4.1.5"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.0.0"
+  }
+}

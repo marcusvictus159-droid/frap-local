@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FRAP Digital">
+<link rel="apple-touch-icon" href="icon-192.png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Ajustes</title>
+    <meta name="theme-color" content="#cc0000">
+    <link href="vendor/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="vendor/bootstrap-icons.css">
+    <style>
+        :root { --cruz-red: #cc0000; }
+        body { background-color: #f4f6f9; font-family: system-ui, -apple-system, sans-serif; }
+        .bg-cruz { background-color: var(--cruz-red) !important; color: white; }
+        .navbar { padding-top: calc(0.5rem + var(--status-bar-height, 24px)) !important; }
+        .card-section { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .btn-cruz { background-color: var(--cruz-red); color: white; font-weight: bold; border-radius: 10px; border: none; }
+        .btn-cruz:hover, .btn-cruz:active { background-color: #990000; color: white; }
+        #lector { width: 100%; max-width: 360px; margin: 0 auto; border-radius: 12px; overflow: hidden; }
+        textarea { font-family: monospace; font-size: 0.8rem; }
+    </style>
+    <script src="app-config.js"></script>
+    <script src="local-core.js"></script>
+    <script src="vendor/html5-qrcode.min.js"></script>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-cruz mb-4 shadow-sm">
+        <div class="container d-flex justify-content-between align-items-center">
+            <a href="index.html" class="text-white text-decoration-none"><i class="bi bi-arrow-left fs-3"></i></a>
+            <span class="navbar-brand mb-0 h1 fw-bold fs-5">Ajustes</span>
+            <div style="width: 24px;"></div>
+        </div>
+    </nav>
+
+    <div class="container pb-5" style="max-width: 480px;">
+
+        <div id="bannerPrimera" class="alert alert-warning border-0 shadow-sm" style="display:none;">
+            <b>Último paso:</b> vincula el grupo de Telegram para que tus FRAP, guardias y checklists lleguen a la institución.
+            Si todavía no tienes el código, puedes <a href="#" id="lnkOmitir">omitir por ahora</a>: todo se guarda en el teléfono y se envía después.
+        </div>
+
+        <!-- TELEGRAM -->
+        <div class="card-section">
+            <h6 class="fw-bold text-uppercase text-muted small mb-3"><i class="bi bi-telegram me-1"></i> Grupo de Telegram</h6>
+            <div id="estadoTg" class="mb-3"></div>
+
+            <div id="bloqueVincular">
+                <p class="small text-muted mb-2">Pide al administrador el <b>QR de configuración</b> (o el código de texto que empieza con <code>FRAP1:</code>).</p>
+                <button type="button" id="btnEscanear" class="btn btn-cruz w-100 mb-2"><i class="bi bi-qr-code-scan"></i> Escanear QR de configuración</button>
+                <div id="zonaLector" style="display:none;" class="mb-2">
+                    <div id="lector"></div>
+                    <button type="button" id="btnCerrarLector" class="btn btn-outline-secondary btn-sm w-100 mt-2">Cancelar</button>
+                </div>
+                <label class="form-label small fw-bold mt-2">…o pega el código</label>
+                <textarea id="txtCodigo" class="form-control mb-2" rows="3" placeholder="FRAP1:eyJ0Ijoi..."></textarea>
+                <button type="button" id="btnVincular" class="btn btn-outline-danger w-100">Vincular con el código</button>
+            </div>
+
+            <div id="bloqueVinculado" style="display:none;">
+                <button type="button" id="btnPrueba" class="btn btn-outline-primary w-100 mb-2"><i class="bi bi-send"></i> Enviar mensaje de prueba</button>
+                <button type="button" id="btnDesvincular" class="btn btn-link text-danger w-100 small">Desvincular este teléfono</button>
+            </div>
+            <div id="msgTg" class="alert py-2 small mt-3 mb-0" style="display:none;"></div>
+        </div>
+
+        <!-- BANDEJA -->
+        <div class="card-section">
+            <h6 class="fw-bold text-uppercase text-muted small mb-3"><i class="bi bi-inbox me-1"></i> Envíos pendientes</h6>
+            <p class="mb-2"><span id="numPendientes" class="fs-4 fw-bold">0</span> <span class="text-muted">avisos por enviar a Telegram</span></p>
+            <div id="detallePendientes" class="small text-muted mb-2"></div>
+            <button type="button" id="btnReintentar" class="btn btn-outline-secondary w-100"><i class="bi bi-arrow-repeat"></i> Reintentar ahora</button>
+        </div>
+
+        <!-- PERFIL / RESPALDO -->
+        <div class="card-section">
+            <h6 class="fw-bold text-uppercase text-muted small mb-3"><i class="bi bi-person-badge me-1"></i> Este teléfono</h6>
+            <p class="mb-1"><b id="txtNombre"></b> · <span id="txtRol" class="text-muted"></span></p>
+            <p class="small text-muted mb-3">Clave de folios: <code id="txtClave"></code></p>
+            <a href="login.html" class="btn btn-outline-secondary w-100 mb-2" id="lnkEditarPerfil">Cambiar nombre o rol</a>
+            <button type="button" id="btnRespaldo" class="btn btn-outline-secondary w-100"><i class="bi bi-download"></i> Exportar respaldo (guardias, servicios, FRAP)</button>
+            <p class="small text-muted mt-2 mb-0">Los datos viven solo en este teléfono. Si lo cambias o reinstalas la app, exporta el respaldo antes.</p>
+        </div>
+    </div>
+
+    <script src="vendor/bootstrap.bundle.min.js"></script>
+    <script>
+        const { Perfil, TG, Outbox, DB, esc, exportarRespaldo, entregarArchivo } = LocalApp;
+        const $ = (id) => document.getElementById(id);
+        const params = new URLSearchParams(location.search);
+        let lector = null;
+
+        if (!Perfil.hayPerfil()) { location.replace('login.html'); }
+
+        function aviso(texto, tipo) {
+            const c = $('msgTg');
+            c.className = 'alert py-2 small mt-3 mb-0 alert-' + (tipo || 'info');
+            c.textContent = texto;
+            c.style.display = 'block';
+        }
+
+        function pintarTelegram() {
+            const c = TG.cfg();
+            if (TG.configurado()) {
+                $('estadoTg').innerHTML = '<span class="badge text-bg-success">Vinculado</span> <span class="ms-1">' + esc(c.grupo || c.chat) + '</span>';
+                $('bloqueVincular').style.display = 'none';
+                $('bloqueVinculado').style.display = 'block';
+            } else {
+                $('estadoTg').innerHTML = '<span class="badge text-bg-secondary">Sin vincular</span>';
+                $('bloqueVincular').style.display = 'block';
+                $('bloqueVinculado').style.display = 'none';
+            }
+        }
+
+        async function pintarPendientes() {
+            const lista = await Outbox.listar();
+            $('numPendientes').textContent = lista.length;
+            const err = Outbox.ultimoError() || (lista.find(i => i.ultimoError) || {}).ultimoError;
+            $('detallePendientes').textContent = lista.length && err ? 'Último error: ' + err : (lista.length ? 'Se enviarán solos cuando haya internet.' : '');
+        }
+
+        async function vincular(texto) {
+            try {
+                const cfg = TG.decodificarCodigo(texto);
+                aviso('Comprobando con Telegram…', 'info');
+                const r = await TG.verificar(cfg);
+                cfg.grupo = r.grupo;
+                TG.guardarCfg(cfg);
+                pintarTelegram();
+                aviso('Listo: vinculado a «' + r.grupo + '» con el bot @' + r.bot + '.', 'success');
+                await Outbox.enviarPendientes();
+                pintarPendientes();
+                if (params.get('primera')) setTimeout(() => { location.href = Perfil.pantallaInicio(); }, 1800);
+            } catch (e) {
+                aviso(e.red ? 'Sin internet: conéctate para vincular.' : (e.message || 'No se pudo vincular.'), 'danger');
+            }
+        }
+
+        async function cerrarLector() {
+            try { if (lector && lector.isScanning) { await lector.stop(); } if (lector) lector.clear(); } catch (e) { /* ya cerrado */ }
+            $('zonaLector').style.display = 'none';
+        }
+
+        $('btnEscanear').addEventListener('click', async () => {
+            $('zonaLector').style.display = 'block';
+            lector = new Html5Qrcode('lector');
+            try {
+                await lector.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 240, height: 240 } }, async (texto) => {
+                    await cerrarLector();
+                    vincular(texto);
+                }, () => {});
+            } catch (e) {
+                $('zonaLector').style.display = 'none';
+                aviso('No se pudo abrir la cámara. Permite el acceso o pega el código de texto.', 'danger');
+            }
+        });
+        $('btnCerrarLector').addEventListener('click', cerrarLector);
+        $('btnVincular').addEventListener('click', () => vincular($('txtCodigo').value));
+
+        $('btnPrueba').addEventListener('click', async () => {
+            try {
+                const p = Perfil.get();
+                await TG.mensaje('✅ <b>Prueba de FRAP Digital</b>\nTeléfono de ' + esc(p.nombre) + ' (' + esc(p.clave) + ') conectado correctamente.');
+                aviso('Mensaje enviado al grupo.', 'success');
+            } catch (e) { aviso(e.red ? 'Sin internet.' : e.message, 'danger'); }
+        });
+        $('btnDesvincular').addEventListener('click', () => {
+            if (confirm('¿Desvincular este teléfono de Telegram? Los avisos pendientes se conservarán hasta que lo vincules otra vez.')) { TG.borrarCfg(); pintarTelegram(); }
+        });
+        $('btnReintentar').addEventListener('click', async () => {
+            const r = await Outbox.enviarPendientes(true);
+            await pintarPendientes();
+            if (r.sinConfig) aviso('Primero vincula Telegram.', 'warning');
+            else aviso(r.enviados ? 'Se enviaron ' + r.enviados + ' aviso(s).' : 'No se pudo enviar ahora. Revisa tu internet.', r.enviados ? 'success' : 'warning');
+        });
+        $('btnRespaldo').addEventListener('click', async () => {
+            const datos = await exportarRespaldo();
+            const nombre = 'respaldo_frap_' + Perfil.get().clave + '_' + new Date().toISOString().slice(0, 10) + '.json';
+            await entregarArchivo(nombre, new Blob([JSON.stringify(datos, null, 1)], { type: 'application/json' }));
+        });
+        $('lnkOmitir').addEventListener('click', (e) => { e.preventDefault(); location.href = Perfil.pantallaInicio(); });
+
+        (function init() {
+            const p = Perfil.get();
+            if (!p) return;
+            $('txtNombre').textContent = p.nombre;
+            $('txtRol').textContent = p.rol === 'operador' ? 'Operador' : 'Paramédico';
+            $('txtClave').textContent = p.clave;
+            if (params.get('primera') && !TG.configurado()) $('bannerPrimera').style.display = 'block';
+            pintarTelegram();
+            pintarPendientes();
+        })();
+    </script>
+</body>
+</html>

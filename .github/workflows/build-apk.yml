@@ -1,0 +1,106 @@
+name: Compilar APK (Android)
+
+# Se ejecuta a mano (Actions -> "Compilar APK" -> Run workflow) y cada vez que
+# cambias archivos de la app en la rama main.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['www/**', 'android-overlay/**', 'scripts/**', 'package.json', 'capacitor.config.json', '.github/workflows/build-apk.yml']
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar dependencias y copiar librerías locales
+        run: |
+          npm install --no-audit --no-fund
+          npm run vendor
+          pip install pillow
+
+      - name: Crear el proyecto Android y personalizarlo
+        env:
+          BASE: ${{ vars.VERSION_CODE_BASE }}
+        run: |
+          CODE=$(( ${BASE:-100} + GITHUB_RUN_NUMBER ))
+          npx cap add android
+          python3 scripts/aplicar-android.py "$CODE" "1.0.${GITHUB_RUN_NUMBER}"
+          npx cap sync android
+
+      - name: Compilar (APK y AAB sin firmar)
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease bundleRelease --no-daemon
+
+      - name: Preparar la llave de firma
+        id: llave
+        env:
+          KS_B64: ${{ secrets.KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          mkdir -p salida
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > frap.keystore
+            echo "pass=$KS_PASS" >> "$GITHUB_OUTPUT"; echo "alias=${KS_ALIAS:-frap}" >> "$GITHUB_OUTPUT"
+            echo "nueva=no" >> "$GITHUB_OUTPUT"
+          else
+            PASS=$(openssl rand -hex 16)
+            keytool -genkeypair -keystore frap.keystore -alias frap -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "$PASS" -keypass "$PASS" -dname "CN=FRAP Digital, O=Cruz Roja Mexicana Huatulco, C=MX"
+            echo "pass=$PASS" >> "$GITHUB_OUTPUT"; echo "alias=frap" >> "$GITHUB_OUTPUT"
+            echo "nueva=si" >> "$GITHUB_OUTPUT"
+            mkdir -p llave
+            cp frap.keystore llave/frap.keystore
+            base64 -w0 frap.keystore > llave/KEYSTORE_BASE64.txt
+            printf 'KEYSTORE_PASSWORD = %s\nKEY_ALIAS = frap\n' "$PASS" > llave/LEEME-llave.txt
+          fi
+
+      - name: Alinear y firmar
+        env:
+          PASS: ${{ steps.llave.outputs.pass }}
+          ALIAS: ${{ steps.llave.outputs.alias }}
+        run: |
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          SIN_FIRMAR=$(find android/app/build/outputs/apk/release -name '*.apk' | head -1)
+          "$BT/zipalign" -p -f 4 "$SIN_FIRMAR" alineado.apk
+          "$BT/apksigner" sign --ks frap.keystore --ks-pass "pass:$PASS" --ks-key-alias "$ALIAS" --key-pass "pass:$PASS" --out salida/FRAP-Digital.apk alineado.apk
+          "$BT/apksigner" verify salida/FRAP-Digital.apk
+          AAB=$(find android/app/build/outputs/bundle/release -name '*.aab' | head -1)
+          cp "$AAB" salida/FRAP-Digital.aab
+          jarsigner -keystore frap.keystore -storepass "$PASS" -keypass "$PASS" -sigalg SHA256withRSA -digestalg SHA-256 salida/FRAP-Digital.aab "$ALIAS"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FRAP-Digital-APK
+          path: salida/
+
+      - name: Guardar la llave nueva (SOLO la primera vez)
+        if: steps.llave.outputs.nueva == 'si'
+        uses: actions/upload-artifact@v4
+        with:
+          name: LLAVE-DE-FIRMA-GUARDAR-Y-NO-COMPARTIR
+          path: llave/
+
+      - name: Aviso
+        if: steps.llave.outputs.nueva == 'si'
+        run: |
+          echo "## ⚠️ Se creó una llave de firma nueva" >> "$GITHUB_STEP_SUMMARY"
+          echo "Descarga el artefacto **LLAVE-DE-FIRMA-GUARDAR-Y-NO-COMPARTIR**, guárdalo en un lugar seguro (respaldo fuera de GitHub) y crea los secretos KEYSTORE_BASE64, KEYSTORE_PASSWORD y KEY_ALIAS como indica el README. Sin esa llave no podrás actualizar la app instalada." >> "$GITHUB_STEP_SUMMARY"

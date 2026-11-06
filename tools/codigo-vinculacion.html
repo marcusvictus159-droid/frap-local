@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Código de vinculación — FRAP Digital</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #f4f6f9; margin: 0; padding: 16px; color: #222; }
+  main { max-width: 520px; margin: 0 auto; }
+  h1 { font-size: 1.25rem; color: #cc0000; }
+  .card { background: #fff; border-radius: 14px; padding: 16px; box-shadow: 0 3px 10px rgba(0,0,0,.06); margin-bottom: 14px; }
+  label { display: block; font-weight: 600; font-size: .85rem; margin: 10px 0 4px; }
+  input, textarea { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; }
+  button { background: #cc0000; color: #fff; border: 0; border-radius: 10px; padding: 12px; width: 100%; font-weight: 700; font-size: 1rem; margin-top: 12px; }
+  button.sec { background: #fff; color: #333; border: 1px solid #bbb; }
+  .aviso { background: #fff3cd; border-radius: 10px; padding: 10px; font-size: .85rem; }
+  .error { background: #f8d7da; border-radius: 10px; padding: 10px; font-size: .9rem; display: none; margin-top: 10px; }
+  #qr { display: block; margin: 12px auto; image-rendering: pixelated; max-width: 100%; }
+  code { word-break: break-all; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Código de vinculación de Telegram</h1>
+  <div class="aviso">🔒 Esta página funciona <b>sin internet</b>: el token no sale de tu dispositivo. El código y el QR que genera dan acceso al bot, así que compártelos solo con el personal autorizado (mejor en persona, escaneando el QR).</div>
+
+  <div class="card">
+    <label for="token">Token del bot (lo da @BotFather)</label>
+    <input id="token" autocomplete="off" placeholder="123456789:AAE...">
+    <label for="chat">ID del grupo (número que empieza con -)</label>
+    <input id="chat" autocomplete="off" placeholder="-1234567890 o -1001234567890">
+    <label for="grupo">Nombre del grupo (opcional, solo para mostrarlo)</label>
+    <input id="grupo" autocomplete="off" placeholder="CRM Huatulco">
+    <button id="btnGenerar" type="button">Generar código y QR</button>
+    <div id="error" class="error"></div>
+  </div>
+
+  <div class="card" id="resultado" style="display:none;">
+    <canvas id="qr"></canvas>
+    <p style="text-align:center;font-size:.85rem;color:#666;margin:0 0 8px;">En la app: Ajustes → Telegram → Escanear QR</p>
+    <label for="codigo">Código de texto</label>
+    <textarea id="codigo" rows="5" readonly></textarea>
+    <button id="btnCopiar" type="button" class="sec">Copiar código</button>
+    <button id="btnPng" type="button" class="sec">Guardar QR como imagen</button>
+  </div>
+</main>
+<script>
+// qrgen.js — generador de códigos QR (modo bytes, niveles L y M).
+// Sin dependencias, funciona sin internet. Basado en el algoritmo estándar ISO 18004.
+(function (root) {
+  'use strict';
+  const ECC = { L: 1, M: 0, Q: 3, H: 2 };                       // bits de formato
+  const IDX = { L: 0, M: 1, Q: 2, H: 3 };
+  const ECC_POR_BLOQUE = [
+    [-1, 7, 10, 15, 20, 26, 18, 20, 24, 30, 18, 20, 24, 26, 30, 22, 24, 28, 30, 28, 28, 28, 28, 30, 30, 26, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30],
+    [-1, 10, 16, 26, 18, 24, 16, 18, 22, 22, 26, 30, 22, 22, 24, 24, 28, 28, 26, 26, 26, 26, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28],
+    [-1, 13, 22, 18, 26, 18, 24, 18, 22, 20, 24, 28, 26, 24, 20, 30, 24, 28, 28, 26, 30, 28, 30, 30, 30, 30, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30],
+    [-1, 17, 28, 22, 16, 22, 28, 26, 26, 24, 28, 24, 28, 22, 24, 24, 30, 28, 28, 26, 28, 30, 24, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30]];
+  const BLOQUES = [
+    [-1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 4, 4, 4, 4, 4, 6, 6, 6, 6, 7, 8, 8, 9, 9, 10, 12, 12, 12, 13, 14, 15, 16, 17, 18, 19, 19, 20, 21, 22, 24, 25],
+    [-1, 1, 1, 1, 2, 2, 4, 4, 4, 5, 5, 5, 8, 9, 9, 10, 10, 11, 13, 14, 16, 17, 17, 18, 20, 21, 23, 25, 26, 28, 29, 31, 33, 35, 37, 38, 40, 43, 45, 47, 49],
+    [-1, 1, 1, 2, 2, 4, 4, 6, 6, 8, 8, 8, 10, 12, 16, 12, 17, 16, 18, 21, 20, 23, 23, 25, 27, 29, 34, 34, 35, 38, 40, 43, 45, 48, 51, 53, 56, 59, 62, 65, 68],
+    [-1, 1, 1, 2, 4, 4, 4, 5, 6, 8, 8, 11, 11, 16, 16, 18, 16, 19, 21, 25, 25, 25, 34, 30, 32, 35, 37, 40, 42, 45, 48, 51, 54, 57, 60, 63, 66, 70, 74, 77, 81]];
+
+  function bitsCrudos(v) {
+    let r = (16 * v + 128) * v + 64;
+    if (v >= 2) { const n = Math.floor(v / 7) + 2; r -= (25 * n - 10) * n - 55; if (v >= 7) r -= 36; }
+    return r;
+  }
+  const palabrasDatos = (v, n) => Math.floor(bitsCrudos(v) / 8) - ECC_POR_BLOQUE[IDX[n]][v] * BLOQUES[IDX[n]][v];
+
+  // --- Reed-Solomon sobre GF(256) ---
+  function gfMul(x, y) { let z = 0; for (let i = 7; i >= 0; i--) { z = (z << 1) ^ ((z >>> 7) * 0x11D); z ^= ((y >>> i) & 1) * x; } return z & 255; }
+  function divisor(grado) {
+    const r = new Array(grado).fill(0); r[grado - 1] = 1; let raiz = 1;
+    for (let i = 0; i < grado; i++) {
+      for (let j = 0; j < r.length; j++) { r[j] = gfMul(r[j], raiz); if (j + 1 < r.length) r[j] ^= r[j + 1]; }
+      raiz = gfMul(raiz, 2);
+    }
+    return r;
+  }
+  function resto(datos, div) {
+    const r = new Array(div.length).fill(0);
+    for (const b of datos) { const f = b ^ r.shift(); r.push(0); div.forEach((c, i) => { r[i] ^= gfMul(c, f); }); }
+    return r;
+  }
+
+  function posicionesAlineacion(v) {
+    if (v === 1) return [];
+    const n = Math.floor(v / 7) + 2;
+    const paso = v === 32 ? 26 : Math.ceil((v * 4 + 4) / (n * 2 - 2)) * 2;
+    const r = [6];
+    for (let pos = v * 4 + 10; r.length < n; pos -= paso) r.splice(1, 0, pos);
+    return r;
+  }
+
+  function crear(texto, nivel) {
+    nivel = nivel || 'M';
+    // Solo L y M están validados con un lector real; Q/H se desactivan a propósito.
+    if (nivel !== 'L' && nivel !== 'M') throw new Error('Solo se admiten los niveles L y M.');
+    const bytes = Array.from(new TextEncoder().encode(texto));
+    let v = 1;
+    for (; ; v++) {
+      if (v > 40) throw new Error('El texto es demasiado largo para un QR.');
+      const bitsCuenta = v < 10 ? 8 : 16;
+      if (4 + bitsCuenta + bytes.length * 8 <= palabrasDatos(v, nivel) * 8) break;
+    }
+    return construir(bytes, v, nivel);
+  }
+
+  function construir(bytes, v, nivel, mascaraForzada) {
+    // ---- datos ----
+    const bits = [];
+    const poner = (val, n) => { for (let i = n - 1; i >= 0; i--) bits.push((val >>> i) & 1); };
+    poner(4, 4); poner(bytes.length, v < 10 ? 8 : 16); bytes.forEach(b => poner(b, 8));
+    const cap = palabrasDatos(v, nivel) * 8;
+    poner(0, Math.min(4, cap - bits.length));
+    poner(0, (8 - bits.length % 8) % 8);
+    for (let p = 0xEC; bits.length < cap; p ^= 0xEC ^ 0x11) poner(p, 8);
+    const datos = [];
+    for (let i = 0; i < bits.length; i += 8) datos.push(parseInt(bits.slice(i, i + 8).join(''), 2));
+
+    // ---- ECC e intercalado ----
+    const nb = BLOQUES[IDX[nivel]][v], eb = ECC_POR_BLOQUE[IDX[nivel]][v];
+    const crudas = Math.floor(bitsCrudos(v) / 8), cortos = nb - crudas % nb, largoCorto = Math.floor(crudas / nb);
+    const div = divisor(eb), bloques = [];
+    for (let i = 0, k = 0; i < nb; i++) {
+      const d = datos.slice(k, k + largoCorto - eb + (i < cortos ? 0 : 1)); k += d.length;
+      const e = resto(d, div);
+      if (i < cortos) d.push(0);
+      bloques.push(d.concat(e));
+    }
+    const todo = [];
+    for (let i = 0; i < bloques[0].length; i++) bloques.forEach((b, j) => { if (i !== largoCorto - eb || j >= cortos) todo.push(b[i]); });
+
+    // ---- matriz ----
+    const n = v * 4 + 17;
+    const m = Array.from({ length: n }, () => new Array(n).fill(false));
+    const fn = Array.from({ length: n }, () => new Array(n).fill(false));
+    const setF = (x, y, val) => { m[y][x] = val; fn[y][x] = true; };
+    for (let i = 0; i < n; i++) { setF(6, i, i % 2 === 0); setF(i, 6, i % 2 === 0); }
+    const buscador = (cx, cy) => { for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) { const d = Math.max(Math.abs(dx), Math.abs(dy)), x = cx + dx, y = cy + dy; if (x >= 0 && x < n && y >= 0 && y < n) setF(x, y, d !== 2 && d !== 4); } };
+    buscador(3, 3); buscador(n - 4, 3); buscador(3, n - 4);
+    const al = posicionesAlineacion(v);
+    al.forEach((a, i) => al.forEach((b, j) => {
+      if ((i === 0 && j === 0) || (i === 0 && j === al.length - 1) || (i === al.length - 1 && j === 0)) return;
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) setF(a + dx, b + dy, Math.max(Math.abs(dx), Math.abs(dy)) !== 1);
+    }));
+    const formato = (mask) => {
+      const d = (ECC[nivel] << 3) | mask; let r = d;
+      for (let i = 0; i < 10; i++) r = (r << 1) ^ ((r >>> 9) * 0x537);
+      const b = ((d << 10) | r) ^ 0x5412, g = (i) => ((b >>> i) & 1) === 1;
+      for (let i = 0; i <= 5; i++) setF(8, i, g(i));
+      setF(8, 7, g(6)); setF(8, 8, g(7)); setF(7, 8, g(8));
+      for (let i = 9; i < 15; i++) setF(14 - i, 8, g(i));
+      for (let i = 0; i < 8; i++) setF(n - 1 - i, 8, g(i));
+      for (let i = 8; i < 15; i++) setF(8, n - 15 + i, g(i));
+      setF(8, n - 8, true);
+    };
+    formato(0);
+    if (v >= 7) {
+      let r = v; for (let i = 0; i < 12; i++) r = (r << 1) ^ ((r >>> 11) * 0x1F25);
+      const b = (v << 12) | r;
+      for (let i = 0; i < 18; i++) { const bit = ((b >>> i) & 1) === 1, a = n - 11 + i % 3, c = Math.floor(i / 3); setF(a, c, bit); setF(c, a, bit); }
+    }
+    // zigzag de datos
+    let k = 0;
+    for (let der = n - 1; der >= 1; der -= 2) {
+      if (der === 6) der = 5;
+      for (let vert = 0; vert < n; vert++) for (let j = 0; j < 2; j++) {
+        const x = der - j, arriba = ((der + 1) & 2) === 0, y = arriba ? n - 1 - vert : vert;
+        if (!fn[y][x] && k < todo.length * 8) { m[y][x] = ((todo[k >>> 3] >>> (7 - (k & 7))) & 1) === 1; k++; }
+      }
+    }
+    const aplicar = (mask) => { for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+      let inv;
+      switch (mask) {
+        case 0: inv = (x + y) % 2 === 0; break; case 1: inv = y % 2 === 0; break; case 2: inv = x % 3 === 0; break; case 3: inv = (x + y) % 3 === 0; break;
+        case 4: inv = (Math.floor(x / 3) + Math.floor(y / 2)) % 2 === 0; break; case 5: inv = x * y % 2 + x * y % 3 === 0; break;
+        case 6: inv = (x * y % 2 + x * y % 3) % 2 === 0; break; default: inv = ((x + y) % 2 + x * y % 3) % 2 === 0;
+      }
+      if (!fn[y][x] && inv) m[y][x] = !m[y][x];
+    } };
+    let mejor = mascaraForzada, minimo = Infinity;
+    if (mejor === undefined) for (let mask = 0; mask < 8; mask++) {
+      aplicar(mask); formato(mask);
+      const p = penalizacion(m, n); if (p < minimo) { minimo = p; mejor = mask; }
+      aplicar(mask);
+    }
+    aplicar(mejor); formato(mejor);
+    return { version: v, tamano: n, modulos: m, mascara: mejor };
+  }
+
+  function penalizacion(m, n) {
+    let p = 0, negros = 0;
+    for (let eje = 0; eje < 2; eje++) for (let a = 0; a < n; a++) {
+      let color = false, corrida = 0, hist = [0, 0, 0, 0, 0, 0, 0];
+      const get = (b) => eje === 0 ? m[a][b] : m[b][a];
+      for (let b = 0; b < n; b++) {
+        const c = get(b);
+        if (c === color) { corrida++; if (corrida === 5) p += 3; else if (corrida > 5) p++; }
+        else { hist.pop(); hist.unshift(corrida); if (!color) { const nn = hist[1]; const core = nn > 0 && hist[2] === nn && hist[3] === nn * 3 && hist[4] === nn && hist[5] === nn; if (core && hist[0] >= nn * 4 && hist[6] >= nn) p += 40; if (core && hist[6] >= nn * 4 && hist[0] >= nn) p += 40; } color = c; corrida = 1; }
+        if (eje === 0 && c) negros++;
+      }
+    }
+    for (let y = 0; y < n - 1; y++) for (let x = 0; x < n - 1; x++) { const c = m[y][x]; if (c === m[y][x + 1] && c === m[y + 1][x] && c === m[y + 1][x + 1]) p += 3; }
+    const total = n * n, k = Math.ceil(Math.abs(negros * 20 - total * 10) / total) - 1;
+    return p + Math.max(0, k) * 10;
+  }
+
+  const api = { crear, construir, palabrasDatos };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.QRGen = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  function mostrarError(t) { const e = $('error'); e.textContent = t; e.style.display = t ? 'block' : 'none'; }
+  function dibujar(modulos, n) {
+    const escala = 8, borde = 4, c = $('qr'), lado = (n + borde * 2) * escala;
+    c.width = lado; c.height = lado;
+    const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, lado, lado); x.fillStyle = '#000';
+    for (let y = 0; y < n; y++) for (let i = 0; i < n; i++) if (modulos[y][i]) x.fillRect((i + borde) * escala, (y + borde) * escala, escala, escala);
+  }
+  $('btnGenerar').addEventListener('click', () => {
+    mostrarError('');
+    const token = $('token').value.trim(), chat = $('chat').value.trim(), grupo = $('grupo').value.trim();
+    if (!/^\d{6,}:[A-Za-z0-9_-]{30,}$/.test(token)) return mostrarError('El token no parece válido (debe verse como 123456789:AAE…).');
+    if (!/^-?\d+$/.test(chat) && !/^@\w+$/.test(chat)) return mostrarError('El ID del grupo debe ser un número como -1001234567890 (o @canal).');
+    // Mismo formato que LocalApp.TG.codificarCodigo en la app.
+    const codigo = 'FRAP1:' + btoa(unescape(encodeURIComponent(JSON.stringify({ t: token, c: chat, g: grupo }))));
+    $('codigo').value = codigo;
+    try { const r = QRGen.crear(codigo, 'M'); dibujar(r.modulos, r.tamano); }
+    catch (e) { return mostrarError('No se pudo hacer el QR: ' + e.message); }
+    $('resultado').style.display = 'block';
+  });
+  $('btnCopiar').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText($('codigo').value); $('btnCopiar').textContent = 'Copiado ✓'; }
+    catch (e) { $('codigo').select(); document.execCommand('copy'); $('btnCopiar').textContent = 'Copiado ✓'; }
+    setTimeout(() => { $('btnCopiar').textContent = 'Copiar código'; }, 2000);
+  });
+  $('btnPng').addEventListener('click', () => {
+    const a = document.createElement('a'); a.href = $('qr').toDataURL('image/png'); a.download = 'qr-vinculacion-frap.png'; a.click();
+  });
+</script>
+</body>
+</html>

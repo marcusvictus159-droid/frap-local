@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FRAP Digital">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<script src="app-config.js"></script>
+    <script src="local-core.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Cálculos Clínicos CRM</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#cc0000">
+    <link href="vendor/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="vendor/bootstrap-icons.css">
+
+    <style>
+        /* COLORES BASADOS EN LA REFERENCIA */
+        :root { 
+            --cruz-red: #cc0000; 
+            --cruz-dark: #990000;
+            --bg-main: #f5f3ef; 
+            --bg-section: #cfbeaf; 
+            --bg-btn: #eadecc; 
+            --text-dark: #2c241b;
+        }
+        
+        body { 
+            background-color: var(--bg-main); 
+            font-family: system-ui, -apple-system, sans-serif; 
+            -webkit-user-select: none; user-select: none; 
+            padding-bottom: 40px;
+        }
+        input, select { -webkit-user-select: auto; user-select: auto; }
+        
+        .navbar-cruz { background-color: var(--cruz-red); color: white; } .navbar { padding-top: calc(0.5rem + var(--status-bar-height, 24px)) !important; }
+        
+        .main-title { font-size: 1.3rem; font-weight: 800; color: #111; text-transform: uppercase; margin: 20px 0 10px 0; letter-spacing: 0.5px;}
+        .section-title { font-size: 0.95rem; font-weight: 800; color: var(--text-dark); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;}
+        
+        .seccion-box { background-color: var(--bg-section); padding: 15px; border-radius: 14px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        
+        .btn-calc { 
+            background-color: var(--bg-btn); 
+            border: none; 
+            color: var(--text-dark); 
+            font-weight: 700; 
+            font-size: 0.75rem; 
+            text-transform: uppercase; 
+            height: 60px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            border-radius: 10px; 
+            box-shadow: 0px 3px 5px rgba(0,0,0,0.08); 
+            width: 100%; 
+            transition: 0.1s ease-in-out; 
+            padding: 0 5px;
+            line-height: 1.1;
+        }
+        .btn-calc:active { background-color: #d1c1b2; transform: scale(0.96); box-shadow: 0px 1px 2px rgba(0,0,0,0.1); }
+        .btn-calc:disabled { opacity: 0.6; }
+
+        /* ESTILOS DE LOS MODALS (PANTALLAS COMPLETAS DE CÁLCULO) */
+        .modal-fullscreen .modal-header { background-color: var(--cruz-red); color: white; border-bottom: none; padding-top: calc(0.75rem + var(--status-bar-height, 24px)); }
+        .modal-body { background-color: #f8f9fa; }
+        .res-box { background-color: #fff; border-radius: 12px; padding: 20px; text-align: center; border: 2px dashed #ccc; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
+        .res-value { font-size: 2.8rem; font-weight: 900; line-height: 1; margin: 10px 0; }
+        .input-group-text { background-color: #e9ecef; font-weight: bold; color: #555; }
+    </style>
+</head>
+<body>
+
+    <!-- BARRA SUPERIOR -->
+    <nav class="navbar navbar-dark navbar-cruz sticky-top shadow-sm">
+        <div class="container d-flex justify-content-between align-items-center">
+            <a href="dashboard.html" class="text-white text-decoration-none"><i class="bi bi-arrow-left fs-3"></i></a>
+            <span class="navbar-brand mb-0 h1 fw-bold fs-5"><i class="bi bi-tools"></i> Herramientas</span>
+            <div style="width: 24px;"></div>
+        </div>
+    </nav>
+
+    <div class="container" style="max-width: 600px;">
+        
+        <h1 class="main-title text-center">Cálculos en Salud</h1>
+        <p class="text-muted text-center small mb-4">Uso exclusivo de soporte prehospitalario.</p>
+
+        <!-- SECCIÓN 1: CÁLCULOS CLÍNICOS -->
+        <div class="section-title">Cálculos Clínicos</div>
+        <div class="seccion-box">
+            <div class="row g-2">
+                <div class="col-6"><button class="btn btn-calc" data-bs-toggle="modal" data-bs-target="#modalGoteo">GOTEO IV</button></div>
+                <div class="col-6"><button class="btn btn-calc" data-bs-toggle="modal" data-bs-target="#modalDosis">DOSIS INDICADA</button></div>
+                <div class="col-6"><button class="btn btn-calc" data-bs-toggle="modal" data-bs-target="#modalO2">DURACIÓN O2</button></div>
+                <div class="col-6"><button class="btn btn-calc" data-bs-toggle="modal" data-bs-target="#modalShock">ÍNDICE DE CHOQUE</button></div>
+            </div>
+        </div>
+
+        <!-- SECCIÓN 2: OTROS (FÓRMULAS) -->
+        <div class="section-title">Otros y Fórmulas</div>
+        <div class="seccion-box">
+            <div class="row g-2">
+                <div class="col-6"><button class="btn btn-calc" data-bs-toggle="modal" data-bs-target="#modalQuemaduras">SUPERFICIE CORPORAL</button></div>
+                <div class="col-6"><button class="btn btn-calc" data-bs-toggle="modal" data-bs-target="#modalPediatria">PEDIATRÍA Y PRESIÓN</button></div>
+                <div class="col-6"><button class="btn btn-calc" data-bs-toggle="modal" data-bs-target="#modalPam">PRESIÓN ART. MEDIA</button></div>
+                <div class="col-6"><button class="btn btn-calc" data-bs-toggle="modal" data-bs-target="#modalVentilador">PROGRAMACIÓN VENTILADOR</button></div>
+                <div class="col-6"><button class="btn btn-calc" data-bs-toggle="modal" data-bs-target="#modalBomba">BOMBA DE INFUSIÓN</button></div>
+                <div class="col-6"><button class="btn btn-calc" data-bs-toggle="modal" data-bs-target="#modalTriadas">TRIADAS MÉDICAS</button></div>
+            </div>
+        </div>
+
+        <!-- SECCIÓN ECG -->
+        <div class="section-title">Electrocardiograma</div>
+        <div class="seccion-box">
+            <div class="row g-2">
+                <div class="col-6"><button class="btn btn-calc" data-bs-toggle="modal" data-bs-target="#modalEcgCalc">CALCULAR FC / QTc</button></div>
+                <div class="col-6"><button class="btn btn-calc" data-bs-toggle="modal" data-bs-target="#modalEcgGuia">GUÍA DE LECTURA</button></div>
+            </div>
+        </div>
+
+        <!-- SECCIÓN 3: GINECO-OBSTETRICIA -->
+        <div class="section-title">Gineco-Obstetricia</div>
+        <div class="seccion-box">
+            <div class="row g-2">
+                <div class="col-6"><button class="btn btn-calc" data-bs-toggle="modal" data-bs-target="#modalGestacion">SEMANAS Y FPP</button></div>
+                <div class="col-6"><button class="btn btn-calc" disabled><i class="bi bi-lock-fill me-1"></i> PÉRDIDAS INSENSIBLES</button></div>
+            </div>
+        </div>
+
+        <!-- SECCIÓN 4: VALORACIONES -->
+        <div class="section-title">Valoraciones y Escalas</div>
+        <div class="seccion-box">
+            <div class="row g-2">
+                <div class="col-6"><button class="btn btn-calc" data-bs-toggle="modal" data-bs-target="#modalGlasgow">ESCALA GLASGOW</button></div>
+                <div class="col-6"><button class="btn btn-calc" data-bs-toggle="modal" data-bs-target="#modalApgar">TEST APGAR</button></div>
+                <div class="col-6"><button class="btn btn-calc" data-bs-toggle="modal" data-bs-target="#modalCincinnati">CÓDIGO ICTUS</button></div>
+                <div class="col-6"><button class="btn btn-calc" data-bs-toggle="modal" data-bs-target="#modalCapurro">TEST CAPURRO</button></div>
+                <div class="col-6"><button class="btn btn-calc" data-bs-toggle="modal" data-bs-target="#modalSilverman">TEST SILVERMAN</button></div>
+                <div class="col-6"><button class="btn btn-calc" disabled><i class="bi bi-lock-fill me-1"></i> NORTON</button></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ======================================================= -->
+    <!-- ZONA DE MODALS (PANTALLAS COMPLETAS DE CÁLCULO)         -->
+    <!-- ======================================================= -->
+
+    <!-- 1. GOTEO IV -->
+    <div class="modal fade" id="modalGoteo" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-droplet-fill"></i> Goteo IV</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3"><label class="fw-bold mb-1">Volumen a infundir</label><div class="input-group input-group-lg"><input type="number" class="form-control text-center fw-bold" id="g_vol" placeholder="1000" oninput="calGoteo()"><span class="input-group-text">ml</span></div></div>
+                    <div class="mb-3"><label class="fw-bold mb-1">Tiempo indicado</label><div class="input-group input-group-lg"><input type="number" class="form-control text-center fw-bold" id="g_tiempo" placeholder="8" oninput="calGoteo()"><span class="input-group-text">Hrs</span></div></div>
+                    <div class="mb-4"><label class="fw-bold mb-1">Equipo de Venoclisis</label><select class="form-select form-select-lg" id="g_equipo" onchange="calGoteo()"><option value="20">Normogotero (20 gts/ml)</option><option value="15">Macrogotero (15 gts/ml)</option><option value="10">Macrogotero (10 gts/ml)</option><option value="60">Microgotero (60 gts/ml)</option></select></div>
+                    
+                    <div class="res-box" style="border-color: #0dcaf0;">
+                        <div class="text-muted text-uppercase fw-bold">Velocidad de Infusión</div>
+                        <div class="res-value text-info" id="res_goteo">0</div>
+                        <div class="fw-bold text-dark">Gotas por minuto (gts/min)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. DOSIS INDICADA -->
+    <div class="modal fade" id="modalDosis" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-capsule"></i> Dosis Indicada</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="fw-bold mb-1 text-primary">1. Presentación de la ampolleta</label>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6"><div class="input-group"><input type="number" class="form-control text-center" id="d_pres_mg" placeholder="Mg/Gr" oninput="calDosis()"><span class="input-group-text">Mg</span></div></div>
+                        <div class="col-6"><div class="input-group"><span class="input-group-text">en</span><input type="number" class="form-control text-center" id="d_pres_ml" placeholder="ml" oninput="calDosis()"><span class="input-group-text">ml</span></div></div>
+                    </div>
+                    <label class="fw-bold mb-1 text-danger">2. Dosis a administrar al paciente</label>
+                    <div class="mb-4"><div class="input-group input-group-lg"><input type="number" class="form-control text-center fw-bold border-danger" id="d_dosis" placeholder="Dosis pedida" oninput="calDosis()"><span class="input-group-text bg-danger text-white border-danger">Mg</span></div></div>
+                    
+                    <div class="res-box" style="border-color: #198754;">
+                        <div class="text-muted text-uppercase fw-bold">Extraer con la jeringa:</div>
+                        <div class="res-value text-success" id="res_dosis">0 <span style="font-size: 1.5rem; color:#333;">ml</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. DURACIÓN O2 -->
+    <div class="modal fade" id="modalO2" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-wind"></i> Duración de Oxígeno</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3"><label class="fw-bold mb-1">Presión Actual (Manómetro)</label><div class="input-group input-group-lg"><input type="number" class="form-control text-center fw-bold" id="o2_psi" placeholder="2000" oninput="calO2()"><span class="input-group-text">PSI</span></div></div>
+                    <div class="mb-3"><label class="fw-bold mb-1">Tipo de Cilindro</label><select class="form-select form-select-lg" id="o2_factor" onchange="calO2()"><option value="0.16">Tipo D (Portátil / Maletín)</option><option value="0.28">Tipo E (Respaldo Camilla)</option><option value="1.56">Tipo M (Fijo en Ambulancia)</option></select></div>
+                    <div class="mb-4"><label class="fw-bold mb-1">Flujo Administrado al paciente</label><div class="input-group input-group-lg"><input type="number" class="form-control text-center fw-bold" id="o2_lpm" placeholder="15" oninput="calO2()"><span class="input-group-text">Lts x Min</span></div></div>
+                    
+                    <div class="res-box" style="border-color: #0d6efd;">
+                        <div class="text-muted text-uppercase fw-bold">Autonomía Segura</div>
+                        <div class="res-value text-primary" id="res_o2">0</div>
+                        <div class="fw-bold text-dark">Minutos restantes</div>
+                        <p class="small text-muted mt-2 mb-0" style="font-size:0.75rem;">Calculado respetando 200 PSI de presión residual segura.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. SHOCK INDEX -->
+    <div class="modal fade" id="modalShock" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-speedometer"></i> Índice de Choque</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted mb-4">Útil para detectar choque hipovolémico oculto o sangrado activo antes de que caiga la presión.</p>
+                    <div class="mb-3"><label class="fw-bold mb-1 text-danger">Frecuencia Cardíaca</label><div class="input-group input-group-lg"><input type="number" class="form-control text-center fw-bold border-danger" id="si_fc" placeholder="LPM" oninput="calShock()"></div></div>
+                    <div class="mb-4"><label class="fw-bold mb-1 text-primary">Tensión Sistólica (TAS)</label><div class="input-group input-group-lg"><input type="number" class="form-control text-center fw-bold border-primary" id="si_tas" placeholder="mmHg" oninput="calShock()"></div></div>
+                    
+                    <div class="res-box" style="border-color: #fd7e14;">
+                        <div class="text-muted text-uppercase fw-bold">Resultado (Normal: 0.5 - 0.7)</div>
+                        <div class="res-value" style="color:#fd7e14;" id="res_si">0.0</div>
+                        <div class="fw-bold mt-1 fs-5" id="eval_si">Esperando datos...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. QUEMADURAS Y PARKLAND -->
+    <div class="modal fade" id="modalQuemaduras" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-fire"></i> Superficie Corporal y Líquidos</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="fw-bold mb-2">1. Marca las zonas quemadas (Adulto):</label>
+                    <div class="row g-2 mb-4 bg-white p-3 rounded border shadow-sm">
+                        <div class="col-6"><div class="form-check"><input class="form-check-input q-check" type="checkbox" value="9" id="q1" style="transform: scale(1.3);"><label class="form-check-label fw-bold ms-2" for="q1">Cabeza 9%</label></div></div>
+                        <div class="col-6"><div class="form-check"><input class="form-check-input q-check" type="checkbox" value="18" id="q2" style="transform: scale(1.3);"><label class="form-check-label fw-bold ms-2" for="q2">Tronco Ant. 18%</label></div></div>
+                        <div class="col-6"><div class="form-check"><input class="form-check-input q-check" type="checkbox" value="18" id="q3" style="transform: scale(1.3);"><label class="form-check-label fw-bold ms-2" for="q3">Espalda 18%</label></div></div>
+                        <div class="col-6"><div class="form-check"><input class="form-check-input q-check" type="checkbox" value="1" id="q8" style="transform: scale(1.3);"><label class="form-check-label fw-bold ms-2 text-danger" for="q8">Genitales 1%</label></div></div>
+                        <div class="col-6"><div class="form-check"><input class="form-check-input q-check" type="checkbox" value="9" id="q4" style="transform: scale(1.3);"><label class="form-check-label fw-bold ms-2" for="q4">Brazo Der. 9%</label></div></div>
+                        <div class="col-6"><div class="form-check"><input class="form-check-input q-check" type="checkbox" value="9" id="q5" style="transform: scale(1.3);"><label class="form-check-label fw-bold ms-2" for="q5">Brazo Izq. 9%</label></div></div>
+                        <div class="col-6"><div class="form-check"><input class="form-check-input q-check" type="checkbox" value="18" id="q6" style="transform: scale(1.3);"><label class="form-check-label fw-bold ms-2" for="q6">Pierna Der. 18%</label></div></div>
+                        <div class="col-6"><div class="form-check"><input class="form-check-input q-check" type="checkbox" value="18" id="q7" style="transform: scale(1.3);"><label class="form-check-label fw-bold ms-2" for="q7">Pierna Izq. 18%</label></div></div>
+                        <div class="col-12 mt-3 text-center border-top pt-2"><div class="text-muted fw-bold">TOTAL SCQ: <span class="fs-3 text-danger ms-2" id="res_quem">0%</span><input type="hidden" id="val_scq" value="0"></div></div>
+                    </div>
+
+                    <label class="fw-bold mb-2">2. Fórmula de Parkland (Líquidos)</label>
+                    <div class="input-group input-group-lg mb-3"><span class="input-group-text">Peso</span><input type="number" class="form-control text-center fw-bold border-primary" id="p_peso" placeholder="Kg" oninput="calParkland()"><span class="input-group-text bg-primary text-white border-primary">Kg</span></div>
+
+                    <div class="res-box p-3" style="border-color: #fd7e14;">
+                        <div class="row">
+                            <div class="col-6 border-end">
+                                <div class="text-muted fw-bold mb-1">Volumen 24 hrs</div>
+                                <div class="res-value" style="color:#fd7e14; font-size:1.8rem;" id="pk_total">0 <span style="font-size: 1rem; color:#333;">ml</span></div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-danger fw-bold mb-1">Pasar en Primeras 8 Hrs</div>
+                                <div class="res-value text-danger" style="font-size:2rem;" id="pk_8h">0 <span style="font-size: 1rem; color:#333;">ml</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. PEDIATRÍA -->
+    <div class="modal fade" id="modalPediatria" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-balloon"></i> Pediatría de Urgencia</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-4"><label class="fw-bold mb-1 text-primary">Edad del paciente pediátrico</label><div class="input-group input-group-lg"><input type="number" class="form-control text-center fw-bold border-primary" id="ped_edad" placeholder="Años (1 a 14)" oninput="calPediatria()"><span class="input-group-text bg-primary text-white border-primary">Años</span></div></div>
+                    
+                    <div class="res-box p-3 text-start" style="border-color: #e83e8c;">
+                        <div class="row g-3">
+                            <div class="col-6 border-end border-bottom pb-3">
+                                <span class="text-muted d-block fw-bold text-uppercase">Peso Estimado</span>
+                                <span class="res-value" style="color:#e83e8c; font-size:2rem;" id="ped_peso">0 kg</span>
+                            </div>
+                            <div class="col-6 border-bottom pb-3 ps-3">
+                                <span class="text-muted d-block fw-bold text-uppercase">TAS Mínima (PA)</span>
+                                <span class="res-value text-success" style="font-size:2rem;" id="ped_tas">0 mmHg</span>
+                            </div>
+                            <div class="col-6 border-end pt-3">
+                                <span class="text-muted d-block fw-bold text-uppercase">Tubo ET (Sin globo)</span>
+                                <span class="res-value text-primary" style="font-size:2rem;" id="ped_tubo">0.0</span>
+                            </div>
+                            <div class="col-6 pt-3 ps-3">
+                                <span class="text-muted d-block fw-bold text-uppercase">Desfibrilación (2J/kg)</span>
+                                <span class="res-value text-danger" style="font-size:2rem;" id="ped_joules">0 J</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. PAM -->
+    <div class="modal fade" id="modalPam" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-activity"></i> Presión Arterial Media</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3"><label class="fw-bold mb-1">Tensión Sistólica (TAS)</label><input type="number" class="form-control form-control-lg text-center fw-bold" id="pam_tas" placeholder="120" oninput="calPam()"></div>
+                    <div class="mb-4"><label class="fw-bold mb-1">Tensión Diastólica (TAD)</label><input type="number" class="form-control form-control-lg text-center fw-bold" id="pam_tad" placeholder="80" oninput="calPam()"></div>
+                    
+                    <div class="res-box" style="border-color: #6f42c1;">
+                        <div class="text-muted text-uppercase fw-bold">Resultado PAM</div>
+                        <div class="res-value" style="color:#6f42c1;" id="res_pam">0</div>
+                        <div class="fw-bold text-dark fs-5 mt-2" id="eval_pam">mmHg</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 8. VENTILACIÓN MECÁNICA -->
+    <div class="modal fade" id="modalVentilador" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-lungs-fill"></i> Programación Ventilador</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted mb-4 fs-6">Parámetros iniciales sugeridos, basados en <b>Peso Ideal</b> (protocolo tipo ARDSNet). Ajustar según respuesta clínica, capnografía y saturación.</p>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6"><label class="fw-bold mb-1 text-primary">Género</label><select class="form-select form-select-lg border-primary shadow-sm" id="vent_gen" onchange="calVentilador()"><option value="M">Hombre</option><option value="F">Mujer</option></select></div>
+                        <div class="col-6"><label class="fw-bold mb-1 text-primary">Estatura</label><div class="input-group input-group-lg"><input type="number" class="form-control text-center fw-bold border-primary shadow-sm" id="vent_est" placeholder="Ej. 170" oninput="calVentilador()"><span class="input-group-text bg-primary text-white border-primary">cm</span></div></div>
+                    </div>
+                    <div class="mb-3"><label class="fw-bold mb-1 text-dark">Estrategia Ventilatoria (Vt)</label><select class="form-select form-select-lg shadow-sm" id="vent_ml" onchange="calVentilador()"><option value="6">6 ml/kg (Protectora / SDRA)</option><option value="7">7 ml/kg</option><option value="8">8 ml/kg (Pulmón sano)</option></select></div>
+                    <div class="mb-4"><label class="fw-bold mb-1 text-dark">Motivo de intubación</label><select class="form-select form-select-lg shadow-sm" id="vent_motivo" onchange="calVentilador()"><option value="general">General / Paro / Sedación</option><option value="epoc">EPOC / Broncoespasmo</option><option value="tce">TCE / Neurológico</option><option value="sdra">SDRA / Falla respiratoria</option></select></div>
+
+                    <div class="res-box" style="border-color: #0dcaf0;">
+                        <div class="row g-2 text-center">
+                            <div class="col-12 border-bottom pb-2 mb-2"><span class="text-muted d-block fw-bold text-uppercase">Volumen Tidal (Vt)</span><span class="res-value text-info" style="font-size:2.4rem;" id="res_vt">0 <span style="font-size: 1.2rem; color:#333;">ml</span></span><span class="text-muted small d-block">Peso Ideal: <span id="res_pi">0 kg</span></span></div>
+                            <div class="col-4"><span class="text-muted d-block fw-bold small">FR</span><span class="fw-bold fs-4" id="res_fr">0</span><span class="text-muted small d-block">x min</span></div>
+                            <div class="col-4"><span class="text-muted d-block fw-bold small">PEEP</span><span class="fw-bold fs-4" id="res_peep">0</span><span class="text-muted small d-block">cmH2O</span></div>
+                            <div class="col-4"><span class="text-muted d-block fw-bold small">FiO2</span><span class="fw-bold fs-4" id="res_fio2">0</span><span class="text-muted small d-block">%</span></div>
+                        </div>
+                        <div class="mt-3 pt-2 border-top text-start small text-muted" id="res_vent_nota">Relación I:E sugerida 1:2. Ajustar PEEP/FiO2 con tabla ARDSNet según SpO2.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOMBA DE INFUSIÓN -->
+    <div class="modal fade" id="modalBomba" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-clock-history"></i> Bomba de Infusión</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted mb-3 fs-6">Convierte una dosis prescrita en la velocidad (ml/hr) a programar en la bomba.</p>
+                    <label class="fw-bold mb-1 text-primary">1. Concentración de la mezcla</label>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6"><div class="input-group"><input type="number" class="form-control text-center" id="b_mg" placeholder="Cantidad" oninput="calBomba()"><span class="input-group-text">mg</span></div></div>
+                        <div class="col-6"><div class="input-group"><span class="input-group-text">en</span><input type="number" class="form-control text-center" id="b_ml" placeholder="Volumen" oninput="calBomba()"><span class="input-group-text">ml</span></div></div>
+                    </div>
+                    <label class="fw-bold mb-1 text-dark">2. Peso del paciente</label>
+                    <div class="mb-3"><div class="input-group"><input type="number" class="form-control text-center" id="b_peso" placeholder="Peso" oninput="calBomba()"><span class="input-group-text">kg</span></div></div>
+                    <label class="fw-bold mb-1 text-danger">3. Dosis indicada</label>
+                    <div class="row g-2 mb-4">
+                        <div class="col-8"><input type="number" class="form-control input-group-lg text-center fw-bold border-danger" id="b_dosis" placeholder="Dosis" oninput="calBomba()"></div>
+                        <div class="col-4"><select class="form-select" id="b_unidad" onchange="calBomba()">
+                            <option value="mcgkgmin">mcg/kg/min</option>
+                            <option value="mgkgmin">mg/kg/min</option>
+                            <option value="mgkghr">mg/kg/hr</option>
+                            <option value="mghr">mg/hr (fijo)</option>
+                            <option value="mcgmin">mcg/min (fijo)</option>
+                        </select></div>
+                    </div>
+
+                    <div class="res-box" style="border-color: #198754;">
+                        <div class="text-muted text-uppercase fw-bold">Programar Bomba a:</div>
+                        <div class="res-value text-success" id="res_bomba">0 <span style="font-size: 1.5rem; color:#333;">ml/hr</span></div>
+                        <p class="small text-muted mt-2 mb-0" style="font-size:0.75rem;">Verifica siempre contra la tarjeta de dosis de tu protocolo antes de administrar.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TRIADAS MÉDICAS -->
+    <div class="modal fade" id="modalTriadas" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-collection-fill"></i> Triadas Médicas</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="accordion" id="accTriadas">
+                        <div class="accordion-item mb-2 rounded overflow-hidden shadow-sm">
+                            <h2 class="accordion-header"><button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#tCushing">Triada de Cushing <span class="badge bg-danger ms-2">HTIC</span></button></h2>
+                            <div id="tCushing" class="accordion-collapse collapse show" data-bs-parent="#accTriadas">
+                                <div class="accordion-body">
+                                    <ul class="mb-2">
+                                        <li><b>Hipertensión</b> arterial (sistólica elevada)</li>
+                                        <li><b>Bradicardia</b></li>
+                                        <li><b>Respiración irregular</b> (patrón de Cheyne-Stokes u otro)</li>
+                                    </ul>
+                                    <p class="text-muted small mb-0">Indica <b>hipertensión intracraneal</b> con riesgo de herniación inminente. Signo tardío y ominoso.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item mb-2 rounded overflow-hidden shadow-sm">
+                            <h2 class="accordion-header"><button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#tBeck">Triada de Beck <span class="badge bg-danger ms-2">Taponamiento</span></button></h2>
+                            <div id="tBeck" class="accordion-collapse collapse" data-bs-parent="#accTriadas">
+                                <div class="accordion-body">
+                                    <ul class="mb-2">
+                                        <li><b>Hipotensión</b> arterial</li>
+                                        <li><b>Ingurgitación yugular</b> (distensión venosa)</li>
+                                        <li><b>Ruidos cardiacos velados</b> (apagados)</li>
+                                    </ul>
+                                    <p class="text-muted small mb-0">Sugiere <b>taponamiento cardiaco</b>. Buscar también pulso paradójico.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item mb-2 rounded overflow-hidden shadow-sm">
+                            <h2 class="accordion-header"><button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#tVirchow">Triada de Virchow <span class="badge bg-warning text-dark ms-2">Trombosis</span></button></h2>
+                            <div id="tVirchow" class="accordion-collapse collapse" data-bs-parent="#accTriadas">
+                                <div class="accordion-body">
+                                    <ul class="mb-2">
+                                        <li><b>Estasis</b> venosa (flujo lento)</li>
+                                        <li><b>Daño endotelial</b> (lesión de la pared vascular)</li>
+                                        <li><b>Hipercoagulabilidad</b></li>
+                                    </ul>
+                                    <p class="text-muted small mb-0">Factores de riesgo clásicos para <b>trombosis venosa</b> (TVP / TEP).</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item mb-2 rounded overflow-hidden shadow-sm">
+                            <h2 class="accordion-header"><button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#tCharcot">Triada de Charcot <span class="badge bg-warning text-dark ms-2">Vía biliar</span></button></h2>
+                            <div id="tCharcot" class="accordion-collapse collapse" data-bs-parent="#accTriadas">
+                                <div class="accordion-body">
+                                    <ul class="mb-2">
+                                        <li><b>Fiebre</b> (con escalofríos)</li>
+                                        <li><b>Ictericia</b></li>
+                                        <li><b>Dolor</b> en hipocondrio derecho</li>
+                                    </ul>
+                                    <p class="text-muted small mb-0">Sugiere <b>colangitis aguda</b>.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ECG: CALCULADORA -->
+    <div class="modal fade" id="modalEcgCalc" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-activity"></i> ECG: Frecuencia y QTc</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="fw-bold mb-2 text-primary">Frecuencia Cardíaca (por cuadros grandes R-R)</label>
+                    <div class="mb-3"><div class="input-group input-group-lg"><input type="number" class="form-control text-center fw-bold border-primary" id="ecg_cuadros" placeholder="Ej. 4" oninput="calEcg()"><span class="input-group-text">cuadros grandes</span></div></div>
+                    <div class="res-box mb-4" style="border-color:#0d6efd;">
+                        <div class="text-muted text-uppercase fw-bold small">FC estimada (300 / cuadros)</div>
+                        <div class="res-value text-primary" style="font-size:2.2rem;" id="res_ecg_fc">0 <span style="font-size:1.2rem; color:#333;">lpm</span></div>
+                    </div>
+
+                    <hr>
+                    <label class="fw-bold mb-2 text-danger mt-3">QT corregido (Fórmula de Bazett)</label>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6"><label class="small text-muted mb-1">Intervalo QT medido</label><div class="input-group"><input type="number" class="form-control text-center" id="ecg_qt" placeholder="Ej. 400" oninput="calEcg()"><span class="input-group-text">ms</span></div></div>
+                        <div class="col-6"><label class="small text-muted mb-1">Intervalo R-R</label><div class="input-group"><input type="number" class="form-control text-center" id="ecg_rr" placeholder="Ej. 800" oninput="calEcg()"><span class="input-group-text">ms</span></div></div>
+                    </div>
+                    <div class="res-box" style="border-color:#dc3545;">
+                        <div class="text-muted text-uppercase fw-bold small">QTc</div>
+                        <div class="res-value text-danger" style="font-size:2.2rem;" id="res_ecg_qtc">0 <span style="font-size:1.2rem; color:#333;">ms</span></div>
+                        <div class="fw-bold mt-1" id="eval_ecg_qtc">Esperando datos...</div>
+                        <p class="small text-muted mt-2 mb-0" style="font-size:0.7rem;">Referencia: normal ≤440ms (H) / ≤460ms (M). Prolongado si es mayor — riesgo de Torsade de Pointes.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ECG: GUÍA DE LECTURA -->
+    <div class="modal fade" id="modalEcgGuia" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-heart-pulse"></i> Guía Rápida de Lectura ECG</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="accordion" id="accEcgGuia">
+                        <div class="accordion-item mb-2 rounded overflow-hidden shadow-sm">
+                            <h2 class="accordion-header"><button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#e1">1. Frecuencia</button></h2>
+                            <div id="e1" class="accordion-collapse collapse show" data-bs-parent="#accEcgGuia">
+                                <div class="accordion-body">
+                                    <p class="mb-0">300 ÷ número de cuadros grandes entre dos R. O bien, 1500 ÷ cuadros pequeños entre dos R. Usa la calculadora de esta sección para agilizarlo.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item mb-2 rounded overflow-hidden shadow-sm">
+                            <h2 class="accordion-header"><button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#e2">2. Ritmo</button></h2>
+                            <div id="e2" class="accordion-collapse collapse" data-bs-parent="#accEcgGuia">
+                                <div class="accordion-body">
+                                    <p class="mb-0">¿Los intervalos R-R son regulares? ¿Hay onda P antes de cada QRS, y cada onda P se sigue de un QRS? Si sí a ambas → probable ritmo sinusal.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item mb-2 rounded overflow-hidden shadow-sm">
+                            <h2 class="accordion-header"><button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#e3">3. Eje eléctrico</button></h2>
+                            <div id="e3" class="accordion-collapse collapse" data-bs-parent="#accEcgGuia">
+                                <div class="accordion-body">
+                                    <p class="mb-0">Mira DI y aVF: ambas positivas → eje normal. DI positiva / aVF negativa → posible desviación izquierda. DI negativa / aVF positiva → desviación derecha. Ambas negativas → eje extremo (indeterminado).</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item mb-2 rounded overflow-hidden shadow-sm">
+                            <h2 class="accordion-header"><button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#e4">4. Intervalos</button></h2>
+                            <div id="e4" class="accordion-collapse collapse" data-bs-parent="#accEcgGuia">
+                                <div class="accordion-body">
+                                    <ul class="mb-0">
+                                        <li><b>PR:</b> 120–200 ms. Prolongado → bloqueo AV 1er grado.</li>
+                                        <li><b>QRS:</b> menor a 120 ms. Ancho → bloqueo de rama o ritmo ventricular.</li>
+                                        <li><b>QT/QTc:</b> usa la calculadora — prolongado predispone a arritmias malignas.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item mb-2 rounded overflow-hidden shadow-sm">
+                            <h2 class="accordion-header"><button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#e5">5. Segmento ST y ondas</button></h2>
+                            <div id="e5" class="accordion-collapse collapse" data-bs-parent="#accEcgGuia">
+                                <div class="accordion-body">
+                                    <p class="mb-0">Elevación del ST ≥1mm en 2 derivaciones contiguas → sospecha IAMCEST. Infradesnivel → isquemia subendocárdica. Onda T invertida o picuda también son datos de alarma según el contexto.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-muted small mt-3 mb-0">Esta guía es un recordatorio rápido de campo, no sustituye la lectura formal ni el criterio médico.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 9. GESTACIÓN Y FPP -->
+    <div class="modal fade" id="modalGestacion" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-calendar2-heart-fill"></i> Cálculo Gestacional</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-4">Calcula las Semanas de Gestación (SDG) y la Fecha Probable de Parto (FPP) basándose en la FUR.</p>
+                    
+                    <div class="mb-4">
+                        <label class="fw-bold mb-2 text-danger">Fecha de Última Regla (FUR / FUM)</label>
+                        <input type="date" class="form-control form-control-lg text-center fw-bold border-danger shadow-sm" id="fur_date" onchange="calGestacion()">
+                    </div>
+                    
+                    <div class="res-box" style="border-color: #d63384; background:#fff5f8;">
+                        <div class="row g-3">
+                            <div class="col-12 border-bottom pb-3 mb-1">
+                                <span class="text-muted d-block fw-bold text-uppercase">Edad Gestacional Actual</span>
+                                <div class="res-value" style="color:#d63384;" id="res_sdg">0 <span style="font-size: 1.5rem; color:#333;">SDG</span></div>
+                                <div class="fw-bold text-dark fs-5 mt-2" id="eval_gestacion">Esperando fecha...</div>
+                            </div>
+                            <div class="col-12">
+                                <span class="text-muted d-block fw-bold text-uppercase mb-1">Fecha Probable de Parto (FPP)</span>
+                                <div class="fs-3 fw-bold text-dark" id="res_fpp">-- / -- / ----</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 10. GLASGOW -->
+    <div class="modal fade" id="modalGlasgow" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-eye-fill"></i> Escala de Glasgow (GCS)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3"><label class="fw-bold mb-1">Respuesta Ocular</label><select class="form-select form-select-lg shadow-sm" id="gcs_o" onchange="calGcs()"><option value="0">Seleccionar...</option><option value="4">4 - Espontánea</option><option value="3">3 - A la voz</option><option value="2">2 - Al dolor</option><option value="1">1 - Ninguna</option></select></div>
+                    <div class="mb-3"><label class="fw-bold mb-1">Respuesta Verbal</label><select class="form-select form-select-lg shadow-sm" id="gcs_v" onchange="calGcs()"><option value="0">Seleccionar...</option><option value="5">5 - Orientada</option><option value="4">4 - Confusa</option><option value="3">3 - Palabras inapropiadas</option><option value="2">2 - Sonidos incomprensibles</option><option value="1">1 - Ninguna</option></select></div>
+                    <div class="mb-4"><label class="fw-bold mb-1">Respuesta Motora</label><select class="form-select form-select-lg shadow-sm" id="gcs_m" onchange="calGcs()"><option value="0">Seleccionar...</option><option value="6">6 - Obedece órdenes</option><option value="5">5 - Localiza el dolor</option><option value="4">4 - Retira al dolor (Flexión)</option><option value="3">3 - Decorticación</option><option value="2">2 - Descerebración</option><option value="1">1 - Flácido / Ninguna</option></select></div>
+                    
+                    <div class="res-box" style="border-color: #ffc107; background:#fffdf5;">
+                        <div class="text-muted text-uppercase fw-bold">Puntaje Total</div>
+                        <div class="res-value text-warning" id="res_gcs" style="text-shadow: 1px 1px 1px #000;">0 / 15</div>
+                        <div class="fw-bold text-dark fs-5 mt-2" id="eval_gcs">Esperando datos...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 11. CINCINNATI -->
+    <div class="modal fade" id="modalCincinnati" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-person-bounding-box"></i> Escala Cincinnati</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted mb-4 fs-5">Marca los signos <b class="text-danger">anormales</b> presentes en el paciente (Sospecha EVC):</p>
+                    
+                    <div class="bg-white p-3 border rounded shadow-sm mb-4">
+                        <div class="form-check form-switch mb-4 border-bottom pb-3">
+                            <input class="form-check-input cin-check" type="checkbox" id="c1" style="transform: scale(1.6); margin-right:15px;">
+                            <label class="form-check-label fs-5 fw-bold" for="c1">Asimetría Facial (Cara caída)</label>
+                        </div>
+                        <div class="form-check form-switch mb-4 border-bottom pb-3">
+                            <input class="form-check-input cin-check" type="checkbox" id="c2" style="transform: scale(1.6); margin-right:15px;">
+                            <label class="form-check-label fs-5 fw-bold" for="c2">Caída del Brazo (Debilidad)</label>
+                        </div>
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input cin-check" type="checkbox" id="c3" style="transform: scale(1.6); margin-right:15px;">
+                            <label class="form-check-label fs-5 fw-bold" for="c3">Alteración del Habla (Arrastra)</label>
+                        </div>
+                    </div>
+                    
+                    <div class="res-box" id="box_cin" style="border-color: #ccc;">
+                        <div class="fw-bold mt-1 fs-4" id="eval_cin">0 signos anormales.<br><small class="text-muted">Probabilidad baja.</small></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 12. APGAR -->
+    <div class="modal fade" id="modalApgar" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-person-hearts"></i> Test APGAR (Neonato)</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3"><label class="fw-bold mb-1 text-danger">A - Apariencia (Color)</label><select class="form-select shadow-sm" id="ap_c" onchange="calApgar()"><option value="-1">Seleccionar...</option><option value="0">0 - Azul / Pálido</option><option value="1">1 - Acrocianosis (Cuerpo rosa)</option><option value="2">2 - Completamente rosado</option></select></div>
+                    <div class="mb-3"><label class="fw-bold mb-1 text-danger">P - Pulso (FC)</label><select class="form-select shadow-sm" id="ap_p" onchange="calApgar()"><option value="-1">Seleccionar...</option><option value="0">0 - Ausente</option><option value="1">1 - Menor a 100 lpm</option><option value="2">2 - Mayor a 100 lpm</option></select></div>
+                    <div class="mb-3"><label class="fw-bold mb-1 text-danger">G - Gestos (Reflejos)</label><select class="form-select shadow-sm" id="ap_g" onchange="calApgar()"><option value="-1">Seleccionar...</option><option value="0">0 - Sin respuesta</option><option value="1">1 - Mueca / Llanto débil</option><option value="2">2 - Llanto vigoroso / Tos</option></select></div>
+                    <div class="mb-3"><label class="fw-bold mb-1 text-danger">A - Actividad (Tono)</label><select class="form-select shadow-sm" id="ap_a" onchange="calApgar()"><option value="-1">Seleccionar...</option><option value="0">0 - Flácido</option><option value="1">1 - Cierta flexión</option><option value="2">2 - Movimiento activo</option></select></div>
+                    <div class="mb-4"><label class="fw-bold mb-1 text-danger">R - Respiración</label><select class="form-select shadow-sm" id="ap_r" onchange="calApgar()"><option value="-1">Seleccionar...</option><option value="0">0 - Ausente / Apnea</option><option value="1">1 - Lenta / Irregular</option><option value="2">2 - Llanto fuerte</option></select></div>
+                    
+                    <div class="res-box" style="border-color: #dc3545; background:#fffafa;">
+                        <div class="text-muted text-uppercase fw-bold">Puntaje APGAR</div>
+                        <div class="res-value text-danger" id="res_apgar">0 / 10</div>
+                        <div class="fw-bold text-dark fs-5 mt-2" id="eval_apgar">Esperando datos...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 13. CAPURRO -->
+    <div class="modal fade" id="modalCapurro" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-calendar-heart-fill"></i> Test de Capurro</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">Estima la Edad Gestacional del Neonato.</p>
+                    <div class="mb-3"><label class="fw-bold mb-1 text-success">Forma de la Oreja (Pabellón)</label><select class="form-select shadow-sm" id="cap_1" onchange="calCapurro()"><option value="-1">Seleccionar...</option><option value="0">0 - Plana / Sin incurvación</option><option value="8">8 - Borde sup. parcialmente incurvado</option><option value="16">16 - Todo el borde sup. incurvado</option><option value="24">24 - Pabellón totalmente incurvado</option></select></div>
+                    <div class="mb-3"><label class="fw-bold mb-1 text-success">Tamaño de Glándula Mamaria</label><select class="form-select shadow-sm" id="cap_2" onchange="calCapurro()"><option value="-1">Seleccionar...</option><option value="0">0 - No palpable</option><option value="5">5 - Palpable menor a 5mm</option><option value="10">10 - Palpable entre 5 y 10mm</option><option value="15">15 - Palpable mayor a 10mm</option></select></div>
+                    <div class="mb-3"><label class="fw-bold mb-1 text-success">Formación del Pezón</label><select class="form-select shadow-sm" id="cap_3" onchange="calCapurro()"><option value="-1">Seleccionar...</option><option value="0">0 - Apenas visible, sin areola</option><option value="5">5 - Diám < 7.5mm, lisa y chata</option><option value="10">10 - Diám > 7.5mm, punteada, no levantada</option><option value="15">15 - Diám > 7.5mm, punteada y levantada</option></select></div>
+                    <div class="mb-3"><label class="fw-bold mb-1 text-success">Textura de la Piel</label><select class="form-select shadow-sm" id="cap_4" onchange="calCapurro()"><option value="-1">Seleccionar...</option><option value="0">0 - Muy fina / Gelatinosa</option><option value="5">5 - Fina / Lisa</option><option value="10">10 - Más gruesa, descamación discreta</option><option value="15">15 - Gruesa, grietas superficiales</option><option value="20">20 - Gruesa, grietas profundas (apergaminada)</option></select></div>
+                    <div class="mb-4"><label class="fw-bold mb-1 text-success">Pliegues Plantares</label><select class="form-select shadow-sm" id="cap_5" onchange="calCapurro()"><option value="-1">Seleccionar...</option><option value="0">0 - Sin pliegues</option><option value="5">5 - Marcas mal definidas en mitad ant.</option><option value="10">10 - Marcas bien definidas en mitad ant.</option><option value="15">15 - Surcos en mitad anterior</option><option value="20">20 - Surcos en más de la mitad anterior</option></select></div>
+                    
+                    <div class="res-box" style="border-color: #198754; background:#f5fff9;">
+                        <div class="text-muted text-uppercase fw-bold">Edad Gestacional</div>
+                        <div class="res-value text-success" id="res_capurro">0 <span style="font-size: 1.5rem; color:#333;">SDG</span></div>
+                        <div class="fw-bold text-dark fs-5 mt-2" id="eval_capurro">Esperando datos...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 14. SILVERMAN -->
+    <div class="modal fade" id="modalSilverman" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-lungs"></i> Test de Silverman-Anderson</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">Evalúa la dificultad respiratoria en recién nacidos.</p>
+                    <div class="mb-3"><label class="fw-bold mb-1 text-info">Movimientos Tóraco-abdominales</label><select class="form-select shadow-sm" id="sil_1" onchange="calSilverman()"><option value="-1">Seleccionar...</option><option value="0">0 - Rítmicos y regulares</option><option value="1">1 - Tórax inmóvil, abdomen en mov.</option><option value="2">2 - Discordancia / Bamboleo</option></select></div>
+                    <div class="mb-3"><label class="fw-bold mb-1 text-info">Tiraje Intercostal</label><select class="form-select shadow-sm" id="sil_2" onchange="calSilverman()"><option value="-1">Seleccionar...</option><option value="0">0 - No hay</option><option value="1">1 - Discreto</option><option value="2">2 - Acentuado / Marcado</option></select></div>
+                    <div class="mb-3"><label class="fw-bold mb-1 text-info">Retracción Xifoidea</label><select class="form-select shadow-sm" id="sil_3" onchange="calSilverman()"><option value="-1">Seleccionar...</option><option value="0">0 - No hay</option><option value="1">1 - Discreta</option><option value="2">2 - Acentuada / Marcada</option></select></div>
+                    <div class="mb-3"><label class="fw-bold mb-1 text-info">Aleteo Nasal</label><select class="form-select shadow-sm" id="sil_4" onchange="calSilverman()"><option value="-1">Seleccionar...</option><option value="0">0 - No hay</option><option value="1">1 - Discreto</option><option value="2">2 - Acentuado / Marcado</option></select></div>
+                    <div class="mb-4"><label class="fw-bold mb-1 text-info">Quejido Espiratorio</label><select class="form-select shadow-sm" id="sil_5" onchange="calSilverman()"><option value="-1">Seleccionar...</option><option value="0">0 - No hay</option><option value="1">1 - Leve / Inconstante (Audible c/Estetos)</option><option value="2">2 - Fuerte / Constante (Audible sin Estetos)</option></select></div>
+                    
+                    <div class="res-box" style="border-color: #0dcaf0; background:#f0fcfd;">
+                        <div class="text-muted text-uppercase fw-bold">Puntaje Silverman</div>
+                        <div class="res-value text-info" id="res_silverman">0 / 10</div>
+                        <div class="fw-bold text-dark fs-5 mt-2" id="eval_silverman">Esperando datos...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="vendor/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // 1. Dosis
+        function calDosis() {
+            let mg = parseFloat(document.getElementById('d_pres_mg').value);
+            let ml = parseFloat(document.getElementById('d_pres_ml').value);
+            let dosis = parseFloat(document.getElementById('d_dosis').value);
+            let res = document.getElementById('res_dosis');
+            if(mg > 0 && ml > 0 && dosis > 0) { res.innerHTML = ((dosis * ml) / mg).toFixed(2) + ' <span style="font-size: 1.5rem; color:#333;">ml</span>'; } 
+            else { res.innerHTML = '0 <span style="font-size: 1.5rem; color:#333;">ml</span>'; }
+        }
+
+        // 2. Goteo
+        function calGoteo() {
+            let vol = parseFloat(document.getElementById('g_vol').value);
+            let hrs = parseFloat(document.getElementById('g_tiempo').value);
+            let equipo = parseFloat(document.getElementById('g_equipo').value);
+            let res = document.getElementById('res_goteo');
+            if(vol > 0 && hrs > 0) { res.innerText = Math.round((vol * equipo) / (hrs * 60)); } 
+            else { res.innerText = "0"; }
+        }
+
+        // 3. Shock Index
+        function calShock() {
+            let fc = parseFloat(document.getElementById('si_fc').value);
+            let tas = parseFloat(document.getElementById('si_tas').value);
+            let res = document.getElementById('res_si');
+            let eval = document.getElementById('eval_si');
+            if(fc > 0 && tas > 0) {
+                let si = (fc / tas).toFixed(2);
+                res.innerText = si;
+                if(si > 0.9) { eval.innerText = "¡ALERTA! Posible Choque / Sangrado"; eval.style.color = "red"; res.style.color = "red"; }
+                else if(si >= 0.7) { eval.innerText = "Precaución / Limítrofe"; eval.style.color = "orange"; res.style.color = "orange"; }
+                else { eval.innerText = "Parámetros Normales"; eval.style.color = "green"; res.style.color = "green"; }
+            } else { res.innerText = "0.0"; eval.innerText = "Esperando datos..."; eval.style.color = "#666"; res.style.color = "#fd7e14"; }
+        }
+
+        // 4. Quemaduras & Parkland
+        function calParkland() {
+            let scq = parseFloat(document.getElementById('val_scq').value);
+            let peso = parseFloat(document.getElementById('p_peso').value);
+            if(scq > 0 && peso > 0) {
+                let total = 4 * peso * scq;
+                document.getElementById('pk_total').innerHTML = Math.round(total) + ' <span style="font-size: 1rem; color:#333;">ml</span>';
+                document.getElementById('pk_8h').innerHTML = Math.round(total / 2) + ' <span style="font-size: 1rem; color:#333;">ml</span>';
+            } else {
+                document.getElementById('pk_total').innerHTML = '0 <span style="font-size: 1rem; color:#333;">ml</span>';
+                document.getElementById('pk_8h').innerHTML = '0 <span style="font-size: 1rem; color:#333;">ml</span>';
+            }
+        }
+
+        document.querySelectorAll('.q-check').forEach(chk => {
+            chk.addEventListener('change', function() {
+                let total = 0;
+                document.querySelectorAll('.q-check:checked').forEach(c => { total += parseInt(c.value); });
+                document.getElementById('res_quem').innerText = total + "%";
+                document.getElementById('val_scq').value = total;
+                calParkland(); 
+            });
+        });
+
+        // 5. Duración O2
+        function calO2() {
+            let psi = parseFloat(document.getElementById('o2_psi').value);
+            let factor = parseFloat(document.getElementById('o2_factor').value);
+            let lpm = parseFloat(document.getElementById('o2_lpm').value);
+            let res = document.getElementById('res_o2');
+            
+            if(psi > 0 && lpm > 0) {
+                let min = ((psi - 200) * factor) / lpm;
+                if(min < 0) min = 0;
+                res.innerText = Math.round(min);
+            } else { res.innerText = "0"; }
+        }
+
+        // 6. PAM
+        function calPam() {
+            let tas = parseFloat(document.getElementById('pam_tas').value);
+            let tad = parseFloat(document.getElementById('pam_tad').value);
+            let res = document.getElementById('res_pam');
+            let eval = document.getElementById('eval_pam');
+            if(tas > 0 && tad > 0) {
+                let pam = Math.round((tas + 2 * tad) / 3);
+                res.innerText = pam;
+                if(pam < 60) { eval.innerText = "Hipotensión / Perfusión insuficiente"; eval.style.color = "red"; }
+                else if (pam > 100) { eval.innerText = "Hipertensión"; eval.style.color = "orange"; }
+                else { eval.innerText = "Perfusión Tisular Normal"; eval.style.color = "green"; }
+            } else { res.innerText = "0"; eval.innerText = "mmHg"; eval.style.color = "#212529"; }
+        }
+
+        // 7. Pediatría
+        function calPediatria() {
+            let edad = parseFloat(document.getElementById('ped_edad').value);
+            if(edad > 0 && edad <= 14) { 
+                let peso = (edad * 2) + 8;
+                let tubo = (edad / 4) + 4;
+                let tas = 70 + (2 * edad);
+                
+                document.getElementById('ped_peso').innerText = peso + " kg";
+                document.getElementById('ped_joules').innerText = (peso * 2) + " J";
+                document.getElementById('ped_tubo').innerText = tubo.toFixed(1);
+                document.getElementById('ped_tas').innerText = tas + " mmHg";
+            } else {
+                document.getElementById('ped_peso').innerText = "0 kg";
+                document.getElementById('ped_joules').innerText = "0 J";
+                document.getElementById('ped_tubo').innerText = "0.0";
+                document.getElementById('ped_tas').innerText = "0 mmHg";
+            }
+        }
+
+        // 8. Glasgow
+        function calGcs() {
+            let o = parseInt(document.getElementById('gcs_o').value);
+            let v = parseInt(document.getElementById('gcs_v').value);
+            let m = parseInt(document.getElementById('gcs_m').value);
+            let res = document.getElementById('res_gcs');
+            let eval = document.getElementById('eval_gcs');
+            if(o > 0 && v > 0 && m > 0) {
+                let total = o + v + m;
+                res.innerText = total + " / 15";
+                if(total >= 13) { eval.innerText = "TCE Leve"; eval.style.color = "green"; }
+                else if(total >= 9) { eval.innerText = "TCE Moderado"; eval.style.color = "orange"; }
+                else { eval.innerText = "TCE Severo (Considerar intubación)"; eval.style.color = "red"; }
+            } else { res.innerText = "0 / 15"; eval.innerText = "Esperando datos..."; eval.style.color = "#212529"; }
+        }
+
+        // 9. Cincinnati
+        document.querySelectorAll('.cin-check').forEach(chk => {
+            chk.addEventListener('change', function() {
+                let anormales = document.querySelectorAll('.cin-check:checked').length;
+                let eval = document.getElementById('eval_cin');
+                let box = document.getElementById('box_cin');
+                
+                if(anormales === 0) {
+                    eval.innerHTML = "0 signos anormales.<br><small class='text-muted'>Probabilidad baja.</small>";
+                    eval.style.color = "#2c241b"; box.style.borderColor = "#ccc";
+                } else {
+                    eval.innerHTML = anormales + " signo(s) anormal(es).<br><small class='text-dark'>Probabilidad de EVC del 72%.</small><br>¡ACTIVE CÓDIGO ICTUS!";
+                    eval.style.color = "red"; box.style.borderColor = "red";
+                }
+            });
+        });
+
+        // 10. Ventilación Mecánica
+        function calVentilador() {
+            let gen = document.getElementById('vent_gen').value;
+            let est = parseFloat(document.getElementById('vent_est').value);
+            let ml = parseFloat(document.getElementById('vent_ml').value);
+            let motivo = document.getElementById('vent_motivo').value;
+            let resVt = document.getElementById('res_vt');
+            let resPi = document.getElementById('res_pi');
+            let resFr = document.getElementById('res_fr');
+            let resPeep = document.getElementById('res_peep');
+            let resFio2 = document.getElementById('res_fio2');
+            let resNota = document.getElementById('res_vent_nota');
+
+            // Parámetros base por motivo de intubación (valores iniciales de referencia)
+            const params = {
+                general: { fr: 14, peep: 5,  fio2: 50, nota: 'Ajustar FiO2 para SpO2 ≥94%. Relación I:E 1:2.' },
+                epoc:    { fr: 10, peep: 3,  fio2: 40, nota: 'FR baja y I:E prolongado (1:3 o 1:4) para evitar auto-PEEP / atrapamiento aéreo.' },
+                tce:     { fr: 16, peep: 5,  fio2: 50, nota: 'Evitar hiperventilación agresiva salvo signos de herniación inminente. Meta ETCO2 35-40mmHg.' },
+                sdra:    { fr: 20, peep: 8,  fio2: 60, nota: 'Vt bajo (6ml/kg) prioritario. PEEP y FiO2 se ajustan juntos según tabla ARDSNet y SpO2.' }
+            };
+
+            if (est > 100 && est < 250) {
+                let pi = 0;
+                if (gen === 'M') { pi = 50 + 0.91 * (est - 152.4); }
+                else { pi = 45.5 + 0.91 * (est - 152.4); }
+                if (pi < 30) pi = 30;
+
+                let vt = Math.round(pi * ml);
+                let p = params[motivo] || params.general;
+
+                resPi.innerText = pi.toFixed(1) + " kg";
+                resVt.innerHTML = vt + ' <span style="font-size: 1.2rem; color:#333;">ml</span>';
+                resFr.innerText = p.fr;
+                resPeep.innerText = p.peep;
+                resFio2.innerText = p.fio2;
+                resNota.innerText = p.nota;
+            } else {
+                resPi.innerText = "0 kg";
+                resVt.innerHTML = '0 <span style="font-size: 1.2rem; color:#333;">ml</span>';
+                resFr.innerText = "0"; resPeep.innerText = "0"; resFio2.innerText = "0";
+                resNota.innerText = 'Relación I:E sugerida 1:2. Ajustar PEEP/FiO2 con tabla ARDSNet según SpO2.';
+            }
+        }
+
+        // BOMBA DE INFUSIÓN
+        function calBomba() {
+            let mg = parseFloat(document.getElementById('b_mg').value);
+            let ml = parseFloat(document.getElementById('b_ml').value);
+            let peso = parseFloat(document.getElementById('b_peso').value);
+            let dosis = parseFloat(document.getElementById('b_dosis').value);
+            let unidad = document.getElementById('b_unidad').value;
+            let res = document.getElementById('res_bomba');
+
+            if (!(mg > 0 && ml > 0 && dosis > 0)) {
+                res.innerHTML = '0 <span style="font-size: 1.5rem; color:#333;">ml/hr</span>';
+                return;
+            }
+            // concentración: mg por ml de la mezcla
+            let concMgMl = mg / ml;
+            let mcgPorMl = concMgMl * 1000;
+            let mlPorHr = 0;
+
+            if (unidad === 'mcgkgmin') {
+                if (!(peso > 0)) { res.innerHTML = '0 <span style="font-size: 1.5rem; color:#333;">ml/hr</span>'; return; }
+                let mcgPorMin = dosis * peso;
+                let mcgPorHr = mcgPorMin * 60;
+                mlPorHr = mcgPorHr / mcgPorMl;
+            } else if (unidad === 'mgkgmin') {
+                if (!(peso > 0)) { res.innerHTML = '0 <span style="font-size: 1.5rem; color:#333;">ml/hr</span>'; return; }
+                let mgPorMin = dosis * peso;
+                let mgPorHr = mgPorMin * 60;
+                mlPorHr = mgPorHr / concMgMl;
+            } else if (unidad === 'mgkghr') {
+                if (!(peso > 0)) { res.innerHTML = '0 <span style="font-size: 1.5rem; color:#333;">ml/hr</span>'; return; }
+                let mgPorHr = dosis * peso;
+                mlPorHr = mgPorHr / concMgMl;
+            } else if (unidad === 'mghr') {
+                mlPorHr = dosis / concMgMl;
+            } else if (unidad === 'mcgmin') {
+                let mcgPorHr = dosis * 60;
+                mlPorHr = mcgPorHr / mcgPorMl;
+            }
+
+            res.innerHTML = mlPorHr.toFixed(1) + ' <span style="font-size: 1.5rem; color:#333;">ml/hr</span>';
+        }
+
+        // ECG: FC por cuadros grandes y QTc (Bazett)
+        function calEcg() {
+            let cuadros = parseFloat(document.getElementById('ecg_cuadros').value);
+            let resFc = document.getElementById('res_ecg_fc');
+            if (cuadros > 0) {
+                resFc.innerHTML = Math.round(300 / cuadros) + ' <span style="font-size:1.2rem; color:#333;">lpm</span>';
+            } else {
+                resFc.innerHTML = '0 <span style="font-size:1.2rem; color:#333;">lpm</span>';
+            }
+
+            let qt = parseFloat(document.getElementById('ecg_qt').value);
+            let rr = parseFloat(document.getElementById('ecg_rr').value);
+            let resQtc = document.getElementById('res_ecg_qtc');
+            let evalQtc = document.getElementById('eval_ecg_qtc');
+            if (qt > 0 && rr > 0) {
+                let rrSeg = rr / 1000;
+                let qtc = Math.round(qt / Math.sqrt(rrSeg));
+                resQtc.innerHTML = qtc + ' <span style="font-size:1.2rem; color:#333;">ms</span>';
+                if (qtc > 460) { evalQtc.innerText = "Prolongado — riesgo de arritmia"; evalQtc.style.color = "red"; }
+                else if (qtc > 440) { evalQtc.innerText = "Límite / vigilar"; evalQtc.style.color = "orange"; }
+                else { evalQtc.innerText = "Dentro de rango normal"; evalQtc.style.color = "green"; }
+            } else {
+                resQtc.innerHTML = '0 <span style="font-size:1.2rem; color:#333;">ms</span>';
+                evalQtc.innerText = "Esperando datos..."; evalQtc.style.color = "#666";
+            }
+        }
+
+        // 11. APGAR
+        function calApgar() {
+            let c = parseInt(document.getElementById('ap_c').value);
+            let p = parseInt(document.getElementById('ap_p').value);
+            let g = parseInt(document.getElementById('ap_g').value);
+            let a = parseInt(document.getElementById('ap_a').value);
+            let r = parseInt(document.getElementById('ap_r').value);
+            
+            let res = document.getElementById('res_apgar');
+            let eval = document.getElementById('eval_apgar');
+            
+            if(c >= 0 && p >= 0 && g >= 0 && a >= 0 && r >= 0) {
+                let total = c + p + g + a + r;
+                res.innerText = total + " / 10";
+                if (total >= 7) { eval.innerText = "Normal / Sin depresión"; eval.style.color = "green"; } 
+                else if (total >= 4) { eval.innerText = "Depresión moderada"; eval.style.color = "orange"; } 
+                else { eval.innerText = "Depresión severa"; eval.style.color = "red"; }
+            } else { res.innerText = "0 / 10"; eval.innerText = "Esperando datos..."; eval.style.color = "#212529"; }
+        }
+
+        // 12. CAPURRO
+        function calCapurro() {
+            let p1 = parseInt(document.getElementById('cap_1').value);
+            let p2 = parseInt(document.getElementById('cap_2').value);
+            let p3 = parseInt(document.getElementById('cap_3').value);
+            let p4 = parseInt(document.getElementById('cap_4').value);
+            let p5 = parseInt(document.getElementById('cap_5').value);
+
+            let res = document.getElementById('res_capurro');
+            let eval = document.getElementById('eval_capurro');
+
+            if(p1 >= 0 && p2 >= 0 && p3 >= 0 && p4 >= 0 && p5 >= 0) {
+                let sum = p1 + p2 + p3 + p4 + p5;
+                let days = 204 + sum;
+                let weeks = Math.floor(days / 7);
+                let extraDays = days % 7;
+
+                res.innerHTML = weeks + ' <span style="font-size: 1.5rem; color:#333;">SDG</span>';
+
+                let evalText = "";
+                if (weeks < 32) { evalText = "Prematuro Extremo"; eval.style.color = "red"; }
+                else if (weeks <= 36) { evalText = "Prematuro (Leve/Moderado)"; eval.style.color = "orange"; }
+                else if (weeks <= 41) { evalText = "A Término"; eval.style.color = "green"; }
+                else { evalText = "Post-Término"; eval.style.color = "blue"; }
+
+                eval.innerHTML = `${evalText}<br><small class="text-muted">(${weeks} semanas con ${extraDays} días)</small>`;
+            } else {
+                res.innerHTML = '0 <span style="font-size: 1.5rem; color:#333;">SDG</span>';
+                eval.innerText = "Esperando datos...";
+                eval.style.color = "#212529";
+            }
+        }
+
+        // 13. SILVERMAN
+        function calSilverman() {
+            let s1 = parseInt(document.getElementById('sil_1').value);
+            let s2 = parseInt(document.getElementById('sil_2').value);
+            let s3 = parseInt(document.getElementById('sil_3').value);
+            let s4 = parseInt(document.getElementById('sil_4').value);
+            let s5 = parseInt(document.getElementById('sil_5').value);
+
+            let res = document.getElementById('res_silverman');
+            let eval = document.getElementById('eval_silverman');
+
+            if(s1 >= 0 && s2 >= 0 && s3 >= 0 && s4 >= 0 && s5 >= 0) {
+                let total = s1 + s2 + s3 + s4 + s5;
+                res.innerText = total + " / 10";
+
+                if (total === 0) { eval.innerText = "0 pts - Sin dificultad respiratoria"; eval.style.color = "green"; }
+                else if (total <= 3) { eval.innerText = "1 a 3 pts - Dificultad respiratoria LEVE"; eval.style.color = "orange"; }
+                else if (total <= 6) { eval.innerText = "4 a 6 pts - Dificultad respiratoria MODERADA"; eval.style.color = "red"; }
+                else { eval.innerText = "7 a 10 pts - Dificultad respiratoria SEVERA"; eval.style.color = "darkred"; }
+            } else {
+                res.innerText = "0 / 10";
+                eval.innerText = "Esperando datos...";
+                eval.style.color = "#212529";
+            }
+        }
+        
+        // 14. GESTACIÓN Y FPP
+        function calGestacion() {
+            let furInput = document.getElementById('fur_date').value;
+            let resSdg = document.getElementById('res_sdg');
+            let resFpp = document.getElementById('res_fpp');
+            let evalG = document.getElementById('eval_gestacion');
+
+            if(furInput) {
+                let fur = new Date(furInput + 'T00:00:00'); 
+                let hoy = new Date();
+                hoy.setHours(0,0,0,0);
+
+                let diffTime = Math.abs(hoy - fur);
+                let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                let semanas = Math.floor(diffDays / 7);
+                let dias = diffDays % 7;
+
+                // Naegele: FUM + 280 días
+                let fpp = new Date(fur);
+                fpp.setDate(fpp.getDate() + 280);
+
+                let opciones = { year: 'numeric', month: 'long', day: 'numeric' };
+                let fppTexto = fpp.toLocaleDateString('es-MX', opciones);
+
+                resSdg.innerHTML = semanas + ' <span style="font-size: 1.5rem; color:#333;">SDG</span>';
+                resFpp.innerHTML = fppTexto;
+
+                if(semanas < 0 || semanas > 44) {
+                     evalG.innerText = "Revisar fecha ingresada";
+                     evalG.style.color = "red";
+                } else if (semanas < 37) {
+                     evalG.innerText = `Prematuro (${semanas} sem, ${dias} días)`;
+                     evalG.style.color = "orange";
+                } else if (semanas <= 41) {
+                     evalG.innerText = `A Término (${semanas} sem, ${dias} días)`;
+                     evalG.style.color = "green";
+                } else {
+                     evalG.innerText = `Post-término (${semanas} sem, ${dias} días)`;
+                     evalG.style.color = "blue";
+                }
+            } else {
+                resSdg.innerHTML = '0 <span style="font-size: 1.5rem; color:#333;">SDG</span>';
+                resFpp.innerHTML = '-- / -- / ----';
+                evalG.innerText = "Esperando fecha...";
+                evalG.style.color = "#212529";
+            }
+        }
+    </script>
+</body>
+</html>

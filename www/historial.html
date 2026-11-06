@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FRAP Digital">
+<link rel="apple-touch-icon" href="icon-192.png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Historial</title>
+    <meta name="theme-color" content="#cc0000">
+    <link href="vendor/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="vendor/bootstrap-icons.css">
+    <style>
+        :root { --cruz-red: #cc0000; }
+        body { background-color: #f4f6f9; font-family: system-ui, -apple-system, sans-serif; }
+        .bg-cruz { background-color: var(--cruz-red) !important; color: white; }
+        .navbar { padding-top: calc(0.5rem + var(--status-bar-height, 24px)) !important; }
+        .card-section { background: white; border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 14px; }
+        .nav-pills .nav-link { color: #555; font-weight: 600; border-radius: 10px; }
+        .nav-pills .nav-link.active { background-color: var(--cruz-red); color: #fff; }
+        .item { border-bottom: 1px solid #eee; padding: 10px 0; }
+        .item:last-child { border-bottom: 0; }
+        .btn-cruz { background-color: var(--cruz-red); color: white; font-weight: bold; border-radius: 10px; border: none; }
+        .btn-cruz:hover { background-color: #990000; color: white; }
+    </style>
+    <script src="app-config.js"></script>
+    <script src="local-core.js"></script>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-cruz mb-3 shadow-sm">
+        <div class="container d-flex justify-content-between align-items-center">
+            <a href="index.html" class="text-white text-decoration-none"><i class="bi bi-arrow-left fs-3"></i></a>
+            <span class="navbar-brand mb-0 h1 fw-bold fs-5">Historial</span>
+            <div style="width: 24px;"></div>
+        </div>
+    </nav>
+
+    <div class="container pb-5" style="max-width: 520px;">
+        <ul class="nav nav-pills nav-fill mb-3" id="pestanas">
+            <li class="nav-item"><a class="nav-link" href="#guardias" data-t="guardias">Guardias</a></li>
+            <li class="nav-item"><a class="nav-link" href="#fraps" data-t="fraps">FRAP</a></li>
+            <li class="nav-item"><a class="nav-link" href="#servicios" data-t="servicios">Servicios</a></li>
+        </ul>
+
+        <!-- GUARDIAS -->
+        <div id="t-guardias" style="display:none;">
+            <div class="card-section">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="mesAnt"><i class="bi bi-chevron-left"></i></button>
+                    <b id="txtMes"></b>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="mesSig"><i class="bi bi-chevron-right"></i></button>
+                </div>
+                <div class="text-center">
+                    <div class="fs-3 fw-bold" id="txtTotal">0h 0m</div>
+                    <div class="small text-muted" id="txtMeta"></div>
+                </div>
+                <div class="progress mt-2" style="height: 10px;"><div id="barra" class="progress-bar bg-success" style="width:0%"></div></div>
+            </div>
+            <div class="card-section" id="listaGuardias"></div>
+        </div>
+
+        <!-- FRAP -->
+        <div id="t-fraps" style="display:none;">
+            <div class="card-section" id="listaFraps"></div>
+        </div>
+
+        <!-- SERVICIOS Y CHECKLISTS -->
+        <div id="t-servicios" style="display:none;">
+            <div class="card-section"><h6 class="fw-bold text-uppercase text-muted small mb-2">Salidas a servicio</h6><div id="listaServicios"></div></div>
+            <div class="card-section"><h6 class="fw-bold text-uppercase text-muted small mb-2">Checklists</h6><div id="listaChecklists"></div></div>
+        </div>
+
+        <div id="msg" class="alert py-2 small" style="display:none;"></div>
+        <p class="small text-muted text-center mt-3">Todo esto está guardado solo en este teléfono. Exporta un respaldo desde Ajustes antes de cambiar de teléfono o reinstalar.</p>
+    </div>
+
+    <script>
+        const { Perfil, DB, Outbox, esc, parseLocal, horasMin, entregarArchivo, fechaLocalStr, META_HORAS_MES } = LocalApp;
+        const $ = (id) => document.getElementById(id);
+        const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+        const perfil = Perfil.get();
+        if (!perfil || !Perfil.sesionActiva()) location.replace('login.html');
+
+        let mes = new Date().getMonth(), anio = new Date().getFullYear();
+
+        function aviso(t, tipo) { const m = $('msg'); m.className = 'alert py-2 small alert-' + (tipo || 'info'); m.textContent = t; m.style.display = 'block'; setTimeout(() => m.style.display = 'none', 4000); }
+        const vacio = (t) => '<p class="text-muted text-center mb-0 py-3">' + t + '</p>';
+        const fmt = (s) => { const d = parseLocal(s); return d ? d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }) + ' ' + d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—'; };
+
+        async function pintarGuardias() {
+            $('txtMes').textContent = MESES[mes][0].toUpperCase() + MESES[mes].slice(1) + ' ' + anio;
+            const todas = (await DB.all('guardias')).filter(g => g.paramedico === perfil.nombre).filter(g => {
+                const e = parseLocal(g.fecha_entrada); return e && e.getMonth() === mes && e.getFullYear() === anio;
+            }).sort((a, b) => b.id - a.id);
+            let seg = 0;
+            todas.forEach(g => { const e = parseLocal(g.fecha_entrada), s = parseLocal(g.fecha_salida); if (e && s) seg += (s - e) / 1000; });
+            const t = horasMin(seg);
+            $('txtTotal').textContent = t.h + 'h ' + t.m + 'm';
+            $('txtMeta').textContent = 'Meta mensual: ' + META_HORAS_MES + 'h · faltan ' + Math.max(0, META_HORAS_MES - t.h) + 'h';
+            $('barra').style.width = Math.min(100, Math.round(seg / 3600 / META_HORAS_MES * 100)) + '%';
+            $('listaGuardias').innerHTML = todas.length ? todas.map(g => {
+                const e = parseLocal(g.fecha_entrada), s = parseLocal(g.fecha_salida);
+                const dur = s ? horasMin((s - e) / 1000) : null;
+                return '<div class="item"><div class="d-flex justify-content-between"><b>' + esc(g.base || 'Base') + '</b>' +
+                    (dur ? '<span class="badge text-bg-success">' + dur.h + 'h ' + dur.m + 'm</span>' : '<span class="badge text-bg-warning">En turno</span>') +
+                    '</div><div class="small text-muted">Entrada ' + fmt(g.fecha_entrada) + (s ? ' · Salida ' + fmt(g.fecha_salida) : '') + '</div></div>';
+            }).join('') : vacio('Sin guardias este mes.');
+        }
+        $('mesAnt').addEventListener('click', () => { mes--; if (mes < 0) { mes = 11; anio--; } pintarGuardias(); });
+        $('mesSig').addEventListener('click', () => { mes++; if (mes > 11) { mes = 0; anio++; } pintarGuardias(); });
+
+        async function pintarFraps() {
+            const lista = (await DB.all('fraps')).sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)));
+            $('listaFraps').innerHTML = lista.length ? lista.map(f =>
+                '<div class="item"><div class="d-flex justify-content-between align-items-start"><div><b>' + esc(f.folio) + '</b><div class="small text-muted">' + fmt(f.fecha) + ' · ' + esc(f.paciente) +
+                (f.resolucion ? ' · ' + esc(f.resolucion) : '') + '</div></div>' +
+                (f.enviado ? '<span class="badge text-bg-success">Enviada</span>' : '<span class="badge text-bg-warning">Pendiente</span>') + '</div>' +
+                '<div class="d-flex gap-2 mt-2"><button type="button" class="btn btn-outline-secondary btn-sm flex-fill" data-pdf="' + esc(f.folio) + '"><i class="bi bi-file-earmark-pdf"></i> PDF</button>' +
+                '<button type="button" class="btn btn-outline-danger btn-sm flex-fill" data-reenviar="' + esc(f.folio) + '"><i class="bi bi-telegram"></i> Reenviar</button></div></div>'
+            ).join('') : vacio('Aún no hay FRAP en este teléfono.');
+        }
+        $('listaFraps').addEventListener('click', async (e) => {
+            const b = e.target.closest('button'); if (!b) return;
+            if (b.dataset.pdf) {
+                const f = await DB.get('fraps', b.dataset.pdf);
+                if (f && f.pdf) await entregarArchivo(f.folio + '.pdf', f.pdf);
+            } else if (b.dataset.reenviar) {
+                const f = await DB.get('fraps', b.dataset.reenviar);
+                if (!f || !f.pdf) return;
+                await Outbox.agregar({ tipo: 'doc', blob: f.pdf, nombre: f.folio + '.pdf', frap: f.folio,
+                    caption: '🚨 <b>FRAP REGISTRADA</b> (reenvío) 🚨\n\n📄 <b>Folio:</b> ' + esc(f.folio) + '\n👤 <b>Paciente:</b> ' + esc(f.paciente) + '\n⚖️ <b>Dictamen:</b> ' + esc(f.resolucion) });
+                const r = await Outbox.enviarPendientes(true);
+                aviso(r.sinConfig ? 'Primero vincula Telegram en Ajustes.' : (r.enviados ? 'Reenviada a Telegram.' : 'No se pudo enviar ahora; quedó pendiente.'), r.enviados ? 'success' : 'warning');
+                pintarFraps();
+            }
+        });
+
+        async function pintarServicios() {
+            const sv = (await DB.all('servicios')).sort((a, b) => b.id - a.id);
+            $('listaServicios').innerHTML = sv.length ? sv.map(s =>
+                '<div class="item"><div class="d-flex justify-content-between"><b>' + esc(s.folio_servicio) + '</b>' +
+                (s.estado === 'activo' ? '<span class="badge text-bg-warning">Activo</span>' : '<span class="badge text-bg-secondary">Cerrado</span>') + '</div>' +
+                '<div class="small text-muted">' + esc(s.unidad) + ' · ' + esc(s.tipo_servicio) + ' · ' + fmt(s.fecha_salida) +
+                (s.km_llegada && s.km_salida ? ' · ' + (Number(s.km_llegada) - Number(s.km_salida)).toFixed(1) + ' km' : '') + '</div></div>'
+            ).join('') : vacio('Sin salidas a servicio.');
+            const ck = (await DB.all('checklists')).sort((a, b) => b.id - a.id);
+            $('listaChecklists').innerHTML = ck.length ? ck.map(c =>
+                '<div class="item"><b>' + esc(c.folio_checklist) + '</b><div class="small text-muted">' + esc(c.operador) + ' · ' + fmt(c.fecha) + '</div></div>'
+            ).join('') : vacio('Sin checklists.');
+        }
+
+        function mostrar(t) {
+            if (!['guardias', 'fraps', 'servicios'].includes(t)) t = 'guardias';
+            ['guardias', 'fraps', 'servicios'].forEach(x => { $('t-' + x).style.display = x === t ? 'block' : 'none'; });
+            document.querySelectorAll('#pestanas .nav-link').forEach(a => a.classList.toggle('active', a.dataset.t === t));
+            if (t === 'guardias') pintarGuardias(); else if (t === 'fraps') pintarFraps(); else pintarServicios();
+        }
+        window.addEventListener('hashchange', () => mostrar(location.hash.slice(1)));
+        mostrar(location.hash.slice(1));
+    </script>
+</body>
+</html>

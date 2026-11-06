@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FRAP Digital">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Salida a Servicio</title>
+    <meta name="theme-color" content="#cc0000">
+    <link href="vendor/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="vendor/bootstrap-icons.css">
+    <style>
+        :root { --cruz-red: #cc0000; }
+        body { background-color: #f4f6f9; font-family: system-ui, -apple-system, sans-serif; }
+        .bg-cruz { background-color: var(--cruz-red) !important; color: white; }
+        .navbar { padding-top: calc(0.5rem + var(--status-bar-height, 24px)) !important; }
+        .card-section { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .recap-box { background: #fff3f3; border: 1px solid #f5c2c2; border-radius: 12px; padding: 14px; font-size: 0.9rem; }
+        .recap-box div { margin-bottom: 4px; }
+    </style>
+    <script src="app-config.js"></script>
+    <script src="local-core.js"></script>
+    <script src="offline-sync.js"></script>
+</head>
+<body>
+
+    <nav class="navbar navbar-dark bg-cruz mb-4 shadow-sm">
+        <div class="container d-flex justify-content-between align-items-center">
+            <a href="dashboard.html" class="text-white text-decoration-none"><i class="bi bi-arrow-left fs-3"></i></a>
+            <span class="navbar-brand mb-0 h1 fw-bold fs-5" id="tituloPagina">Salida a Servicio</span>
+            <div style="width: 24px;"></div>
+        </div>
+    </nav>
+
+    <div class="container pb-5" style="max-width: 480px;">
+
+        <div id="avisoOffline" class="alert alert-warning py-2 small text-center" style="display:none;">
+            <i class="bi bi-wifi-off"></i> Sin conexión — se guardará en el teléfono y se enviará solo al recuperar señal.
+        </div>
+
+        <!-- FORMULARIO DE SALIDA -->
+        <div id="bloqueSalida" style="display:none;">
+            <div class="card-section">
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Unidad</label>
+                    <select class="form-select" id="s_unidad">
+                        <option value="OAX-082">OAX-082</option>
+                        <option value="OAX-083">OAX-083</option>
+                        <option value="OAX-084">OAX-084</option>
+                        <option value="OAX-085">OAX-085</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Tipo de servicio</label>
+                    <select class="form-select" id="s_tipo">
+                        <option>Traslado</option>
+                        <option>Urgencia</option>
+                        <option>Evento programado / cobertura</option>
+                        <option>Servicio particular</option>
+                        <option>Otro</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Operador</label>
+                    <input type="text" class="form-control" id="s_operador" placeholder="Nombre del operador">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Jefe de servicio</label>
+                    <input type="text" class="form-control" id="s_jefe" readonly style="background:#f0f0f0;">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Auxiliares</label>
+                    <input type="text" class="form-control" id="s_auxiliares" placeholder="Nombres, separados por coma">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Km de salida</label>
+                    <input type="number" class="form-control" id="s_km" placeholder="Ej. 45210" inputmode="decimal">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Nivel de combustible</label>
+                    <select class="form-select" id="s_combustible">
+                        <option value="Vacío">Vacío</option>
+                        <option value="1/4">1/4</option>
+                        <option value="1/2" selected>1/2</option>
+                        <option value="3/4">3/4</option>
+                        <option value="Lleno">Lleno</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Ubicación del servicio</label>
+                    <input type="text" class="form-control" id="s_ubicacion" placeholder="Dirección o referencia">
+                </div>
+                <button type="button" id="btnGuardarSalida" class="btn w-100 fw-bold" style="background-color:var(--cruz-red); color:white; border-radius:10px; padding:12px;">
+                    <i class="bi bi-truck"></i> Registrar Salida
+                </button>
+            </div>
+        </div>
+
+        <!-- FORMULARIO DE CIERRE -->
+        <div id="bloqueCierre" style="display:none;">
+            <div class="recap-box mb-3">
+                <div class="fw-bold text-danger mb-2"><i class="bi bi-info-circle-fill"></i> Servicio en curso</div>
+                <div><b>Folio:</b> <span id="r_folio"></span></div>
+                <div><b>Unidad:</b> <span id="r_unidad"></span></div>
+                <div><b>Tipo:</b> <span id="r_tipo"></span></div>
+                <div><b>Operador:</b> <span id="r_operador"></span></div>
+                <div><b>Jefe:</b> <span id="r_jefe"></span></div>
+                <div><b>Salida:</b> <span id="r_km_ubic"></span></div>
+            </div>
+
+            <div class="card-section">
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Km de llegada</label>
+                    <input type="number" class="form-control" id="c_km" placeholder="Ej. 45260" inputmode="decimal">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Nivel de combustible</label>
+                    <select class="form-select" id="c_combustible">
+                        <option value="Vacío">Vacío</option>
+                        <option value="1/4">1/4</option>
+                        <option value="1/2" selected>1/2</option>
+                        <option value="3/4">3/4</option>
+                        <option value="Lleno">Lleno</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">¿Hubo traslado a hospital?</label>
+                    <input type="text" class="form-control" id="c_hospital" placeholder="Nombre del hospital (déjalo vacío si no aplica)">
+                </div>
+                <button type="button" id="btnGuardarCierre" class="btn w-100 fw-bold" style="background-color:#198754; color:white; border-radius:10px; padding:12px;">
+                    <i class="bi bi-flag-fill"></i> Cerrar Servicio
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function generarRefLocal() {
+            return 'local_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+        }
+
+        async function nombreSesion() {
+            const cache = localStorage.getItem('dashboard_cache');
+            if (cache) return JSON.parse(cache).nombre_completo || '';
+            try {
+                const resp = await fetch(API_BASE + '/api/session.php', { credentials: 'include' });
+                const datos = await resp.json();
+                return datos.success ? datos.nombre_completo : '';
+            } catch (err) { return ''; }
+        }
+
+        async function iniciar() {
+            const conexion = await hayConexionReal();
+            if (!conexion) {
+                document.getElementById('avisoOffline').style.display = 'block';
+            }
+
+            let activo = JSON.parse(localStorage.getItem('servicio_activo') || 'null');
+
+            if (!activo && conexion) {
+                // No hay nada guardado localmente — antes de asumir que no
+                // hay servicio activo, preguntamos al servidor (por ejemplo,
+                // si reinstalaste la app o cambiaste de teléfono).
+                try {
+                    const resp = await fetch(API_BASE + '/api/servicio.php?action=activo', { credentials: 'include' });
+                    const datos = await resp.json();
+                    if (datos.success && datos.servicio_activo) {
+                        const s = datos.servicio_activo;
+                        activo = {
+                            id: s.id, folio_servicio: s.folio_servicio, sincronizado: true,
+                            unidad: s.unidad, tipo_servicio: s.tipo_servicio, operador: s.operador, jefe_servicio: s.jefe_servicio,
+                            km_salida: s.km_salida, ubicacion_servicio: s.ubicacion_servicio
+                        };
+                        localStorage.setItem('servicio_activo', JSON.stringify(activo));
+                    }
+                } catch (err) { /* seguimos sin conexión real, no pasa nada */ }
+            }
+
+            if (activo) {
+                mostrarCierre(activo);
+            } else {
+                mostrarSalida();
+                document.getElementById('s_jefe').value = await nombreSesion();
+            }
+        }
+
+        function mostrarSalida() {
+            document.getElementById('tituloPagina').textContent = 'Salida a Servicio';
+            document.getElementById('bloqueSalida').style.display = 'block';
+            document.getElementById('bloqueCierre').style.display = 'none';
+        }
+
+        function mostrarCierre(activo) {
+            document.getElementById('tituloPagina').textContent = 'Cierre de Servicio';
+            document.getElementById('bloqueSalida').style.display = 'none';
+            document.getElementById('bloqueCierre').style.display = 'block';
+
+            document.getElementById('r_folio').textContent = activo.folio_servicio || (activo.sincronizado ? '' : 'Se asignará al sincronizar');
+            document.getElementById('r_unidad').textContent = activo.unidad || '';
+            document.getElementById('r_tipo').textContent = activo.tipo_servicio || '';
+            document.getElementById('r_operador').textContent = activo.operador || '';
+            document.getElementById('r_jefe').textContent = activo.jefe_servicio || '';
+            document.getElementById('r_km_ubic').textContent = (activo.km_salida || '—') + ' km · ' + (activo.ubicacion_servicio || '');
+        }
+
+        document.getElementById('btnGuardarSalida').addEventListener('click', async () => {
+            const boton = document.getElementById('btnGuardarSalida');
+            boton.disabled = true;
+            boton.innerHTML = 'Guardando...';
+
+            const localRef = generarRefLocal();
+            const datos = {
+                unidad: document.getElementById('s_unidad').value,
+                tipo_servicio: document.getElementById('s_tipo').value,
+                operador: document.getElementById('s_operador').value,
+                jefe_servicio: document.getElementById('s_jefe').value,
+                auxiliares: document.getElementById('s_auxiliares').value,
+                km_salida: document.getElementById('s_km').value,
+                combustible_salida: document.getElementById('s_combustible').value,
+                ubicacion_servicio: document.getElementById('s_ubicacion').value,
+                local_servicio_ref: localRef
+            };
+
+            // Guardamos primero el "activo" localmente (sin folio real todavía)
+            // para que, aunque cierres la app, al volver te muestre el cierre
+            // en vez de dejarte crear una salida duplicada.
+            localStorage.setItem('servicio_activo', JSON.stringify({ ...datos, sincronizado: false }));
+
+            await guardarPendiente(datos, 'salida_servicio');
+            await sincronizarPendientes();
+
+            window.location.href = 'dashboard.html';
+        });
+
+        document.getElementById('btnGuardarCierre').addEventListener('click', async () => {
+            const boton = document.getElementById('btnGuardarCierre');
+            boton.disabled = true;
+            boton.innerHTML = 'Guardando...';
+
+            const activo = JSON.parse(localStorage.getItem('servicio_activo') || '{}');
+            const datos = {
+                servicio_id: activo.sincronizado ? activo.id : null,
+                folio_servicio: activo.sincronizado ? activo.folio_servicio : null,
+                local_servicio_ref: activo.local_servicio_ref,
+                km_llegada: document.getElementById('c_km').value,
+                combustible_llegada: document.getElementById('c_combustible').value,
+                hospital_traslado: document.getElementById('c_hospital').value
+            };
+
+            await guardarPendiente(datos, 'cierre_servicio');
+            await sincronizarPendientes();
+
+            window.location.href = 'dashboard.html';
+        });
+
+        iniciar();
+    </script>
+</body>
+</html>

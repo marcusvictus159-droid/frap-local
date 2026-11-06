@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FRAP Digital">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Mi Perfil</title>
+    <meta name="theme-color" content="#cc0000">
+    <link href="vendor/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="vendor/bootstrap-icons.css">
+    <style>
+        :root { --cruz-red: #cc0000; }
+        body { background-color: #f4f6f9; font-family: system-ui, -apple-system, sans-serif; -webkit-user-select: none; user-select: none; }
+        input { -webkit-user-select: auto; user-select: auto; }
+        .bg-cruz { background-color: var(--cruz-red) !important; color: white; }
+        .navbar { padding-top: calc(0.5rem + var(--status-bar-height, 24px)) !important; }
+        .avatar-wrap { position: relative; width: 130px; height: 130px; margin: 0 auto; }
+        .avatar-img { width: 130px; height: 130px; border-radius: 50%; object-fit: cover; border: 4px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); background: #ddd; }
+        .avatar-edit-btn { position: absolute; bottom: 2px; right: 2px; background: var(--cruz-red); color: white; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+        .card-section { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    </style>
+    <script src="app-config.js"></script>
+    <script src="local-core.js"></script>
+</head>
+<body>
+
+    <nav class="navbar navbar-dark bg-cruz mb-4 shadow-sm">
+        <div class="container d-flex justify-content-between align-items-center">
+            <a href="dashboard.html" class="text-white text-decoration-none"><i class="bi bi-arrow-left fs-3"></i></a>
+            <span class="navbar-brand mb-0 h1 fw-bold fs-5">Mi Perfil</span>
+            <div style="width: 24px;"></div>
+        </div>
+    </nav>
+
+    <div class="container pb-5" style="max-width: 480px;">
+
+        <div class="text-center mb-4">
+            <div class="avatar-wrap">
+                <img id="imgAvatar" class="avatar-img" src="" alt="Foto de perfil">
+                <button type="button" id="btnEditarFoto" class="avatar-edit-btn"><i class="bi bi-camera-fill"></i></button>
+                <input type="file" accept="image/*" capture="environment" id="inputFotoWeb" class="d-none">
+            </div>
+            <h5 class="fw-bold mt-3 mb-0" id="txtNombrePerfil">Cargando...</h5>
+            <p class="text-muted small" id="txtRolPerfil"></p>
+            <div id="avisoFoto" class="small text-muted mt-1" style="display:none;"></div>
+        </div>
+
+        <div class="card-section">
+            <h6 class="fw-bold text-uppercase text-muted small mb-3"><i class="bi bi-person-badge me-1"></i> Este teléfono</h6>
+            <p class="small text-muted mb-1">Tu perfil vive solo en este teléfono: ya no hay usuario ni contraseña.</p>
+            <p class="mb-3">Clave de folios: <code id="txtClave"></code></p>
+            <a href="login.html" class="btn btn-outline-secondary w-100 mb-2" id="lnkEditar">Cambiar nombre o rol</a>
+            <a href="ajustes.html" class="btn btn-outline-secondary w-100 mb-2"><i class="bi bi-telegram"></i> Telegram, envíos pendientes y respaldo</a>
+            <button type="button" id="btnSalir" class="btn btn-cruz w-100 mt-2" style="background-color:var(--cruz-red); color:white; font-weight:bold; border-radius:10px;">Cerrar sesión</button>
+        </div>
+
+    </div>
+
+    <script src="vendor/bootstrap.bundle.min.js"></script>
+    <script>
+        // Los plugins nativos están disponibles cuando corre dentro de la app
+        // de Android (Capacitor los inyecta solo). En la versión web/PWA
+        // (iPhone, o cualquier navegador) no existen, así que usamos un
+        // respaldo: input de archivo del navegador + IndexedDB en vez del
+        // almacenamiento interno nativo.
+        const Camera = window.Capacitor?.Plugins?.Camera;
+        const Filesystem = window.Capacitor?.Plugins?.Filesystem;
+        const Directory = { DATA: 'DATA' };
+        const esNativo = !!(Camera && Filesystem);
+
+        const NOMBRE_ARCHIVO_LOCAL = 'perfil_foto.jpg';
+        const AVATAR_POR_DEFECTO = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" fill="#cc0000"/><circle cx="100" cy="78" r="38" fill="#fff"/><path d="M30 190c0-42 31-68 70-68s70 26 70 68z" fill="#fff"/></svg>');
+        const imgAvatar = document.getElementById('imgAvatar');
+        const avisoFoto = document.getElementById('avisoFoto');
+
+        function mostrarAvisoFoto(msg) {
+            avisoFoto.textContent = msg;
+            avisoFoto.style.display = 'block';
+            clearTimeout(avisoFoto._t);
+            avisoFoto._t = setTimeout(() => { avisoFoto.style.display = 'none'; }, 4000);
+        }
+
+        // --- Respaldo web: guardamos la foto en IndexedDB (funciona igual
+        // en Safari/iPhone que en cualquier navegador, y persiste entre
+        // aperturas cuando la PWA está agregada a la pantalla de inicio). ---
+        function abrirDbFoto() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open('perfil_foto_db', 1);
+                req.onupgradeneeded = (e) => {
+                    if (!e.target.result.objectStoreNames.contains('fotos')) {
+                        e.target.result.createObjectStore('fotos');
+                    }
+                };
+                req.onsuccess = (e) => resolve(e.target.result);
+                req.onerror = (e) => reject(e.target.error);
+            });
+        }
+        async function guardarFotoWeb(base64SinPrefijo) {
+            const db = await abrirDbFoto();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction('fotos', 'readwrite');
+                tx.objectStore('fotos').put(base64SinPrefijo, NOMBRE_ARCHIVO_LOCAL);
+                tx.oncomplete = () => resolve();
+                tx.onerror = (e) => reject(e.target.error);
+            });
+        }
+        async function leerFotoWeb() {
+            const db = await abrirDbFoto();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction('fotos', 'readonly');
+                const req = tx.objectStore('fotos').get(NOMBRE_ARCHIVO_LOCAL);
+                req.onsuccess = () => resolve(req.result || null);
+                req.onerror = (e) => reject(e.target.error);
+            });
+        }
+
+        // 1) Intentamos mostrar la foto que ya esté guardada localmente —
+        //    esto carga instantáneo, sin red.
+        async function cargarFotoLocal() {
+            try {
+                if (esNativo) {
+                    const resultado = await Filesystem.readFile({ path: NOMBRE_ARCHIVO_LOCAL, directory: Directory.DATA });
+                    imgAvatar.src = 'data:image/jpeg;base64,' + resultado.data;
+                } else {
+                    const base64 = await leerFotoWeb();
+                    if (!base64) throw new Error('sin foto guardada');
+                    imgAvatar.src = 'data:image/jpeg;base64,' + base64;
+                }
+                return true;
+            } catch (err) {
+                imgAvatar.src = AVATAR_POR_DEFECTO;
+                return false;
+            }
+        }
+
+        async function guardarFotoLocal(base64SinPrefijo) {
+            if (esNativo) {
+                await Filesystem.writeFile({ path: NOMBRE_ARCHIVO_LOCAL, data: base64SinPrefijo, directory: Directory.DATA });
+            } else {
+                await guardarFotoWeb(base64SinPrefijo);
+            }
+        }
+
+        // 2) Datos del perfil (están en el teléfono; no hay servidor).
+        (function pintarPerfil() {
+            const p = LocalApp.Perfil.get();
+            if (!p) { window.location.href = 'login.html'; return; }
+            document.getElementById('txtNombrePerfil').textContent = p.nombre;
+            document.getElementById('txtRolPerfil').textContent = p.rol === 'operador' ? 'Operador de ambulancia' : 'Paramédico / Jefe de servicio';
+            document.getElementById('txtClave').textContent = p.clave;
+        })();
+
+        cargarFotoLocal();
+
+        // 3) Cambiar la foto: tomar/elegir y guardar en el teléfono.
+        async function procesarNuevaFoto(base64SinPrefijo) {
+            imgAvatar.src = 'data:image/jpeg;base64,' + base64SinPrefijo;
+            await guardarFotoLocal(base64SinPrefijo);
+            mostrarAvisoFoto('Foto guardada en el teléfono ✓');
+        }
+
+        document.getElementById('btnEditarFoto').addEventListener('click', async () => {
+            if (esNativo) {
+                try {
+                    const foto = await Camera.getPhoto({ quality: 70, resultType: 'base64', source: 'PROMPT', width: 500 });
+                    await procesarNuevaFoto(foto.base64String);
+                } catch (err) { /* el usuario canceló */ }
+            } else {
+                // Respaldo web (iPhone / navegador): selector de archivo del
+                // sistema, que en el teléfono ofrece cámara o galería.
+                document.getElementById('inputFotoWeb').click();
+            }
+        });
+
+        document.getElementById('inputFotoWeb').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+                await procesarNuevaFoto(String(reader.result).split(',')[1]);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        document.getElementById('btnSalir').addEventListener('click', () => {
+            LocalApp.Perfil.cerrarSesion();
+            window.location.href = 'login.html';
+        });
+    </script>
+</body>
+</html>

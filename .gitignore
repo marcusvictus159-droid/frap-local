@@ -1,0 +1,8 @@
+node_modules/
+android/
+www/vendor/
+respaldo/
+*.jks
+*.keystore
+*.sql
+.env

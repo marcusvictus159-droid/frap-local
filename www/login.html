@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FRAP Digital">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Acceso - FRAP Digital</title>
+    <meta name="theme-color" content="#cc0000">
+    <link href="vendor/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="vendor/bootstrap-icons.css">
+    <style>
+        body { background-color: #f4f6f9; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; padding-top: var(--status-bar-height, 24px); box-sizing: border-box; }
+        .login-card { background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        .logo-cruz { color: #cc0000; font-size: 3rem; margin-bottom: 10px; }
+        .btn-cruz { background-color: #cc0000; color: white; border: none; border-radius: 10px; font-weight: bold; padding: 12px; }
+        .btn-cruz:hover { background-color: #990000; color: white; }
+        .form-control { border-radius: 10px; padding: 12px; }
+    </style>
+    <script src="app-config.js"></script>
+    <script src="local-core.js"></script>
+</head>
+<body>
+
+<div class="container px-3">
+    <div class="login-card mx-auto text-center">
+        <i class="bi bi-heart-pulse-fill logo-cruz"></i>
+        <h3 class="fw-bold text-dark mb-1">FRAP Digital</h3>
+        <p class="text-muted small mb-4">Cruz Roja Mexicana · Delegación Huatulco</p>
+
+        <div id="cajaError" class="alert alert-danger shadow-sm border-0" role="alert" style="display:none;">
+            <i class="bi bi-exclamation-triangle-fill"></i> <span id="txtError"></span>
+        </div>
+
+        <!-- Ya existe un perfil en este teléfono -->
+        <div id="bloqueContinuar" style="display:none;">
+            <p class="text-muted mb-1">Perfil guardado en este teléfono</p>
+            <h5 class="fw-bold mb-3" id="txtPerfilGuardado"></h5>
+            <button type="button" id="btnContinuar" class="btn btn-cruz w-100 shadow-sm">Continuar</button>
+            <button type="button" id="btnOtroPerfil" class="btn btn-link text-muted mt-3 small">No soy yo / editar mi perfil</button>
+        </div>
+
+        <!-- Perfil nuevo -->
+        <form id="formPerfil" style="display:none;">
+            <p class="text-muted small text-start">Tu perfil se guarda solo en este teléfono. Ya no hay usuario ni contraseña.</p>
+            <div class="mb-3 text-start">
+                <label class="form-label text-muted fw-bold small">Nombre completo</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-person-fill text-muted"></i></span>
+                    <input type="text" id="nombre" class="form-control border-start-0 bg-light" placeholder="Ej. Juan Pérez López" autocomplete="name" required minlength="5">
+                </div>
+            </div>
+            <div class="mb-4 text-start">
+                <label class="form-label text-muted fw-bold small">Rol</label>
+                <select id="rol" class="form-select bg-light" style="border-radius:10px; padding:12px;">
+                    <option value="paramedico">Paramédico / Jefe de servicio</option>
+                    <option value="operador">Operador de ambulancia</option>
+                </select>
+            </div>
+            <button type="submit" id="btnGuardar" class="btn btn-cruz w-100 shadow-sm">Guardar y entrar</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const { Perfil, TG } = LocalApp;
+    const $ = (id) => document.getElementById(id);
+
+    function irAInicio() {
+        Perfil.iniciarSesion();
+        const destino = Perfil.pantallaInicio();
+        localStorage.setItem('home_screen', destino);
+        // La primera vez, si Telegram no está vinculado, se pasa por Ajustes.
+        window.location.href = TG.configurado() ? destino : 'ajustes.html?primera=1';
+    }
+
+    function mostrarFormulario(precargar) {
+        $('bloqueContinuar').style.display = 'none';
+        $('formPerfil').style.display = 'block';
+        if (precargar) { $('nombre').value = precargar.nombre; $('rol').value = precargar.rol; }
+        $('btnGuardar').textContent = precargar ? 'Guardar cambios' : 'Guardar y entrar';
+    }
+
+    const perfil = Perfil.get();
+    if (perfil) {
+        $('txtPerfilGuardado').textContent = perfil.nombre;
+        $('bloqueContinuar').style.display = 'block';
+        $('btnContinuar').addEventListener('click', irAInicio);
+        $('btnOtroPerfil').addEventListener('click', () => mostrarFormulario(perfil));
+    } else {
+        mostrarFormulario(null);
+    }
+
+    $('formPerfil').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const nombre = $('nombre').value.trim();
+        if (nombre.split(/\s+/).length < 2) {
+            $('txtError').textContent = 'Escribe tu nombre completo (nombre y apellido).';
+            $('cajaError').style.display = 'block';
+            return;
+        }
+        Perfil.guardar(nombre, $('rol').value);
+        irAInicio();
+    });
+</script>
+</body>
+</html>
