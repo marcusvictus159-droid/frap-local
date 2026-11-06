@@ -171,7 +171,7 @@ textarea { font-family: ui-monospace, Menlo, monospace; }
     padding: 16px; border-radius: 16px; border: 0; color: #fff; cursor: pointer;
     background: linear-gradient(180deg, #ff3045, #c9101f);
     box-shadow: 0 10px 26px rgba(227, 25, 43, .45), inset 0 1px 0 rgba(255, 255, 255, .3);
-    font-family: var(--titulo); font-weight: 800; font-size: 1.45rem; text-transform: uppercase; letter-spacing: .06em;
+    font-family: var(--titulo); font-weight: 800; font-size: 1.2rem; text-transform: uppercase; letter-spacing: .05em;
 }
 .gps-detectar .bi { font-size: 1.7rem; }
 .gps-detectar:active { transform: scale(.985); }
@@ -238,3 +238,40 @@ textarea { font-family: ui-monospace, Menlo, monospace; }
     color: var(--txt) !important;
 }
 .signo-fila.bg-white { background: rgba(5, 12, 36, .45) !important; }
+
+/* Paneles que aparecen según el caso (paro, intoxicación, obstétrica, quemaduras) */
+.panel-cond {
+    background: linear-gradient(160deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .03));
+    border: 1px solid var(--linea); border-left: 5px solid var(--acc, var(--rojo2));
+    border-radius: 16px; padding: 14px; margin-bottom: 20px; color: var(--txt);
+}
+.panel-cond.pc-sub { border-left-width: 1px; border-style: dashed; padding: 12px; margin-bottom: 0; }
+.panel-cond.pc-rosa { --acc: #ff7ab8; } .panel-cond.pc-naranja { --acc: #ff9f43; }
+.panel-cond.pc-azul { --acc: #4da3ff; } .panel-cond.pc-rojo { --acc: #ff4457; }
+.panel-cond h6, .panel-cond .fw-bold { color: #fff; }
+.panel-cond .text-danger, .panel-cond .text-cruz { color: var(--acc) !important; }
+
+/* Semáforo de prioridad */
+.semaforo { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 4px 0 2px; }
+.sem {
+    display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 2px 8px;
+    border-radius: 16px; border: 2px solid var(--linea); background: rgba(255, 255, 255, .04); color: var(--txt);
+    font-family: var(--titulo); transition: transform .12s, box-shadow .12s, opacity .12s;
+}
+.sem b { font-size: 1rem; text-transform: uppercase; letter-spacing: .05em; line-height: 1.1; }
+.sem small { font: 600 .68rem system-ui, sans-serif; color: var(--mut); text-transform: uppercase; letter-spacing: .04em; }
+.sem .luz { width: 34px; height: 34px; border-radius: 50%; background: var(--c); box-shadow: inset 0 -4px 8px rgba(0, 0, 0, .35), inset 0 3px 6px rgba(255, 255, 255, .35); opacity: .55; transition: opacity .12s, box-shadow .12s; }
+.sem-verde { --c: #22c55e; } .sem-amarilla { --c: #facc15; } .sem-roja { --c: #ef2b3c; } .sem-negra { --c: #1b1b1f; }
+.sem-negra .luz { border: 2px solid #8b93ab; }
+.semaforo.con-valor .sem:not(.activa) { opacity: .5; }
+.sem.activa { border-color: var(--c); background: rgba(255, 255, 255, .1); transform: translateY(-2px); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 35%, transparent), 0 10px 22px rgba(0, 0, 0, .4); }
+.sem-negra.activa { border-color: #ffffff; }
+.sem.activa .luz { opacity: 1; box-shadow: 0 0 18px 4px color-mix(in srgb, var(--c) 70%, transparent), inset 0 -4px 8px rgba(0, 0, 0, .3), inset 0 3px 6px rgba(255, 255, 255, .4); }
+.sem:active { transform: scale(.96); }
+
+/* Franja bajo la barra de estado para que la hora y la señal se lean al desplazar */
+body::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: var(--status-bar-height, env(safe-area-inset-top, 0px)); background: #0b1533; z-index: 3000; pointer-events: none; }
+
+/* Pie de página */
+.pie-derechos { text-align: center; color: var(--mut); font-size: .8rem; padding: 18px 0 6px; letter-spacing: .02em; }
+.pie-derechos b { color: var(--txt); font-family: var(--titulo); letter-spacing: .06em; font-size: .95rem; }

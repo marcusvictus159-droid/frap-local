@@ -113,18 +113,14 @@
 
                 <div class="mb-3">
                     <label class="form-label fw-bold">Motivo y Prioridad</label>
-                    <div class="row g-2">
-                        <div class="col-8"><input type="text" class="form-control form-control-sm" name="motivo_atencion" placeholder="Motivo de atención"></div>
-                        <div class="col-4">
-                            <select class="form-select form-select-sm" name="prioridad_inicial">
-                                <option value="">Prioridad</option>
-                                <option value="Verde">Verde</option>
-                                <option value="Amarilla">Amarilla</option>
-                                <option value="Roja">Roja</option>
-                                <option value="Negra">Negra</option>
-                            </select>
-                        </div>
+                    <input type="text" class="form-control form-control-sm mb-2" name="motivo_atencion" placeholder="Motivo de atención">
+                    <div class="semaforo" id="semaforo" data-input="prioridad_inicial" role="radiogroup" aria-label="Prioridad inicial">
+                        <button type="button" class="sem sem-verde" data-v="Verde" role="radio" aria-checked="false"><span class="luz"></span><b>Verde</b><small>Leve</small></button>
+                        <button type="button" class="sem sem-amarilla" data-v="Amarilla" role="radio" aria-checked="false"><span class="luz"></span><b>Amarilla</b><small>Urgente</small></button>
+                        <button type="button" class="sem sem-roja" data-v="Roja" role="radio" aria-checked="false"><span class="luz"></span><b>Roja</b><small>Crítico</small></button>
+                        <button type="button" class="sem sem-negra" data-v="Negra" role="radio" aria-checked="false"><span class="luz"></span><b>Negra</b><small>Fallecido</small></button>
                     </div>
+                    <input type="hidden" name="prioridad_inicial" id="prioridad_inicial" value="">
                 </div>
 
                 <div class="mb-3">
@@ -367,7 +363,7 @@
                     <div class="col-12"><small class="text-muted">Monitoreo ECG</small><input type="text" class="form-control form-control-sm" name="eval_ecg" placeholder="Sinusal, Asistolia, Fibrilación..."></div>
                 </div>
 
-                <div class="mb-4 p-3" style="background: #e9ecef; border-radius: 12px;">
+                <div class="mb-4 p-3 panel-cond pc-azul">
                     <h6 class="fw-bold text-dark"><i class="bi bi-activity text-cruz"></i> Signos Vitales y PAM</h6>
                     <div id="contenedor-signos">
                         <div class="row g-1 mb-2 signo-fila bg-white p-2 border rounded">
@@ -405,7 +401,7 @@
                     <label class="form-check-label fw-bold text-cruz" for="switchGineco" style="font-size: 1.05rem;">¿Atención Gineco-Obstétrica?</label>
                 </div>
                 
-                <div id="moduloGineco" style="display: none; background: #fff0f5; padding: 15px; border-radius: 12px; border: 1px solid #f8d7da; margin-bottom: 20px;">
+                <div id="moduloGineco" class="panel-cond pc-rosa" style="display: none;">
                     <h6 class="fw-bold text-cruz mb-3"><i class="bi bi-gender-female"></i> Evaluación Obstétrica</h6>
                     
                     <div class="row g-2 mb-3">
@@ -444,7 +440,7 @@
                         <label class="form-check-label fw-bold text-danger" for="switchParto" style="font-size: 1rem;">¿Se atendió Parto (Nacimiento)?</label>
                     </div>
                     
-                    <div id="moduloParto" style="display: none; background: #fff; padding: 12px; border-radius: 8px; border: 1px dashed #f5c2c7;">
+                    <div id="moduloParto" class="panel-cond pc-rosa pc-sub" style="display: none;">
                         <h6 class="fw-bold text-dark mb-2"><i class="bi bi-person-hearts text-danger"></i> Datos del Recién Nacido</h6>
                         
                         <div class="row g-2 mb-3">
@@ -586,7 +582,7 @@
                     <input class="form-check-input" type="checkbox" id="switchQuemados" name="quemados_aplica" value="Sí" style="transform: scale(1.4); margin-right: 10px;" onchange="toggleQuemados()">
                     <label class="form-check-label fw-bold text-cruz" for="switchQuemados" style="font-size: 1.05rem;">¿Paciente con Quemaduras?</label>
                 </div>
-                <div id="moduloQuemados" style="display: none; background: #fff8f0; padding: 15px; border-radius: 12px; border: 1px solid #ffeeba; margin-bottom: 20px;">
+                <div id="moduloQuemados" class="panel-cond pc-naranja" style="display: none;">
                     <h6 class="fw-bold text-cruz mb-2"><i class="bi bi-fire"></i> Evaluación de Superficie Corporal Quemada</h6>
                     <div class="row g-2 mb-3">
                         <div class="col-6">
@@ -800,7 +796,7 @@
                     <input class="form-check-input" type="checkbox" id="switchIntoxicados" name="intoxicacion_aplica" value="Sí" style="transform: scale(1.4); margin-right: 10px;" onchange="toggleIntoxicados()">
                     <label class="form-check-label fw-bold text-cruz" for="switchIntoxicados" style="font-size: 1.05rem;">¿Paciente Intoxicado / Envenenado?</label>
                 </div>
-                <div id="moduloIntoxicados" style="display: none; background: #f0f8ff; padding: 15px; border-radius: 12px; border: 1px solid #b8daff; margin-bottom: 20px;">
+                <div id="moduloIntoxicados" class="panel-cond pc-azul" style="display: none;">
                     <h6 class="fw-bold text-cruz mb-2"><i class="bi bi-exclamation-triangle-fill"></i> Registro de Intoxicación</h6>
                     
                     <div class="row g-2 mb-3">
@@ -848,7 +844,7 @@
                     <input class="form-check-input" type="checkbox" id="switchRcp" name="rcp_iniciado" value="Sí" style="transform: scale(1.4); margin-right: 10px;" onchange="toggleRcp()">
                     <label class="form-check-label fw-bold text-cruz" for="switchRcp" style="font-size: 1.05rem;">¿Paciente en Paro (Se aplicó RCP)?</label>
                 </div>
-                <div id="moduloRcp" style="display: none; background: #fff3f3; padding: 12px; border-radius: 12px; border: 1px solid #ffcccc; margin-bottom: 20px;">
+                <div id="moduloRcp" class="panel-cond pc-rojo" style="display: none;">
                     <h6 class="fw-bold text-cruz mb-2">Bitácora de Reanimación Cardiopulmonar</h6>
                     <div class="row g-2 mb-2">
                         <div class="col-6"><small class="text-muted">Hora de Inicio</small><input type="time" class="form-control form-control-sm" name="rcp_hora_inicio"></div>
@@ -898,16 +894,17 @@
                             <option value="Cadáver en el Lugar">Cadáver en el Lugar</option>
                         </select>
                     </div>
-                    <div class="col-6">
-                        <select class="form-select form-select-sm" name="triage_final">
-                            <option value="">Triage Final...</option>
-                            <option value="Verde">Verde</option>
-                            <option value="Amarillo">Amarillo</option>
-                            <option value="Rojo">Rojo</option>
-                            <option value="Negro">Negro</option>
-                        </select>
+                    <div class="col-12">
+                        <label class="form-label fw-bold small mb-1">Triage final</label>
+                        <div class="semaforo" id="semaforoFinal" data-input="triage_final" role="radiogroup" aria-label="Triage final">
+                            <button type="button" class="sem sem-verde" data-v="Verde" role="radio" aria-checked="false"><span class="luz"></span><b>Verde</b></button>
+                            <button type="button" class="sem sem-amarilla" data-v="Amarillo" role="radio" aria-checked="false"><span class="luz"></span><b>Amarillo</b></button>
+                            <button type="button" class="sem sem-roja" data-v="Rojo" role="radio" aria-checked="false"><span class="luz"></span><b>Rojo</b></button>
+                            <button type="button" class="sem sem-negra" data-v="Negro" role="radio" aria-checked="false"><span class="luz"></span><b>Negro</b></button>
+                        </div>
+                        <input type="hidden" name="triage_final" id="triage_final" value="">
                     </div>
-                    <div class="col-6">
+                    <div class="col-12">
                         <select class="form-select form-select-sm" name="vehiculo_traslado">
                             <option value="">Unidad...</option>
                             <option value="OAX-082">OAX-082</option>
@@ -1112,7 +1109,7 @@
         if (borradorGuardado) {
             if (confirm('Tienes un FRAP guardado como borrador (pausado).\n\n¿Deseas cargarlo para poner tu hora de base y terminarlo?')) {
                 cargarBorradorConfirmado = true;
-                cargarBorrador(JSON.parse(borradorGuardado));
+                cargarBorrador(JSON.parse(borradorGuardado)); pintarSemaforo();
             } else {
                 localStorage.removeItem('frap_borrador');
             }
@@ -1512,6 +1509,28 @@
         localStorage.removeItem('dashboard_cache');
         window.location.href = 'login.html';
     }
+</script>
+<script>
+// Semáforos (prioridad inicial y triage final): un toque elige el color; tocar el mismo lo quita.
+function pintarSemaforo() {
+    document.querySelectorAll('.semaforo').forEach(function (g) {
+        var h = document.getElementById(g.dataset.input || 'prioridad_inicial');
+        var v = h ? h.value : '';
+        g.querySelectorAll('.sem').forEach(function (b) {
+            var on = b.dataset.v === v;
+            b.classList.toggle('activa', on); b.setAttribute('aria-checked', on ? 'true' : 'false');
+        });
+        g.classList.toggle('con-valor', !!v);
+    });
+}
+document.querySelectorAll('.semaforo').forEach(function (g) {
+    g.addEventListener('click', function (e) {
+        var b = e.target.closest('.sem'); if (!b) return;
+        var h = document.getElementById(g.dataset.input || 'prioridad_inicial');
+        h.value = (h.value === b.dataset.v) ? '' : b.dataset.v;
+        pintarSemaforo();
+    });
+});
 </script>
 <script>
 (function () {
