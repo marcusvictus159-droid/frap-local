@@ -12,7 +12,7 @@ import os, re, shutil, sys
 version_code = sys.argv[1] if len(sys.argv) > 1 else "1"
 version_name = sys.argv[2] if len(sys.argv) > 2 else "1.0"
 APP = "android/app/src/main"
-PAQUETE_DIR = f"{APP}/java/com/softechmx/frapcrm"
+PAQUETE_DIR = f"{APP}/java/com/steap/frap"
 
 # 1) MainActivity
 os.makedirs(PAQUETE_DIR, exist_ok=True)

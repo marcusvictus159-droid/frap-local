@@ -1,4 +1,4 @@
-package com.softechmx.frapcrm;
+package com.steap.frap;
 
 import android.os.Bundle;
 import android.view.View;
