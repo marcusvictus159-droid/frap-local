@@ -34,36 +34,30 @@ open(ruta, "w", encoding="utf8").write(m)
 
 # 3) Ícono: corazón rojo con línea de pulso sobre azul marino (neutral, sirve para cualquier institución)
 from PIL import Image, ImageDraw
-NAVY = (11, 21, 51, 255)
+NAVY = (0, 0, 0, 255)
 ROJO = (227, 25, 43, 255)
 def icono(tam, fondo, escala):
-    img = Image.new("RGBA", (tam, tam), fondo)
-    d = ImageDraw.Draw(img)
-    w = tam * escala               # ancho del corazón
-    cx, cy = tam / 2, tam / 2 + w * 0.04
-    r = w * 0.27
-    d.ellipse([cx - w / 2, cy - w * 0.38, cx - w / 2 + 2 * r + w * 0.04, cy - w * 0.38 + 2 * r + w * 0.04], fill=ROJO)
-    d.ellipse([cx + w / 2 - 2 * r - w * 0.04, cy - w * 0.38, cx + w / 2, cy - w * 0.38 + 2 * r + w * 0.04], fill=ROJO)
-    d.polygon([(cx - w / 2 + w * 0.01, cy - w * 0.08), (cx + w / 2 - w * 0.01, cy - w * 0.08), (cx, cy + w * 0.5)], fill=ROJO)
-    pts = [(-0.34, 0.02), (-0.14, 0.02), (-0.06, -0.14), (0.04, 0.2), (0.12, -0.02), (0.34, -0.02)]
-    d.line([(cx + x * w, cy + y * w) for x, y in pts], fill=(255, 255, 255, 255), width=max(2, int(w * 0.05)), joint="curve")
+    img = Image.new('RGBA', (tam, tam), fondo)
+    lg = Image.open('assets/steap-logo.png').convert('RGBA')
+    w = int(tam * escala); lg = lg.resize((w, round(w * lg.height / lg.width)), Image.LANCZOS)
+    img.alpha_composite(lg, ((tam - w) // 2, (tam - lg.height) // 2))
     return img
 densidades = {"mdpi": 1, "hdpi": 1.5, "xhdpi": 2, "xxhdpi": 3, "xxxhdpi": 4}
 for dens, k in densidades.items():
     carpeta = f"{APP}/res/mipmap-{dens}"
     os.makedirs(carpeta, exist_ok=True)
     lado = int(48 * k)
-    icono(lado * 4, NAVY, 0.62).resize((lado, lado), Image.LANCZOS).save(f"{carpeta}/ic_launcher.png")
-    redondo = icono(lado * 4, NAVY, 0.55).resize((lado, lado), Image.LANCZOS)
+    icono(lado * 4, NAVY, 0.86).resize((lado, lado), Image.LANCZOS).save(f"{carpeta}/ic_launcher.png")
+    redondo = icono(lado * 4, NAVY, 0.72).resize((lado, lado), Image.LANCZOS)
     mascara = Image.new("L", (lado, lado), 0)
     ImageDraw.Draw(mascara).ellipse([0, 0, lado - 1, lado - 1], fill=255)
     redondo.putalpha(mascara)
     redondo.save(f"{carpeta}/ic_launcher_round.png")
     fg = int(108 * k)
-    icono(fg * 4, (0, 0, 0, 0), 0.42).resize((fg, fg), Image.LANCZOS).save(f"{carpeta}/ic_launcher_foreground.png")
+    icono(fg * 4, (0, 0, 0, 0), 0.58).resize((fg, fg), Image.LANCZOS).save(f"{carpeta}/ic_launcher_foreground.png")
 fondo = f"{APP}/res/values/ic_launcher_background.xml"
 if os.path.exists(fondo):
-    open(fondo, "w", encoding="utf8").write('<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">#0B1533</color>\n</resources>\n')
+    open(fondo, "w", encoding="utf8").write('<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">#000000</color>\n</resources>\n')
 
 # 4) Versión
 g = "android/app/build.gradle"

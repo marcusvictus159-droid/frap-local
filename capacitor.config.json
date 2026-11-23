@@ -1,6 +1,6 @@
 {
-  "appId": "com.softechmx.frapcrm",
-  "appName": "FRAP Digital",
+  "appId": "com.steap.frap",
+  "appName": "STEAP FRAP",
   "webDir": "www",
   "android": {
     "allowMixedContent": false

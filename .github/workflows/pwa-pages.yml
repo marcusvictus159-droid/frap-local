@@ -1,8 +1,10 @@
 name: Publicar versión web (iPhone) en GitHub Pages
 
-# Solo manual: requiere activar GitHub Pages (Settings -> Pages -> Source: GitHub Actions).
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['www/**', 'scripts/preparar-vendor.mjs', 'package.json', '.github/workflows/pwa-pages.yml']
 
 permissions:
   contents: read

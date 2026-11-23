@@ -70,7 +70,7 @@ jobs:
           else
             PASS=$(openssl rand -hex 16)
             keytool -genkeypair -keystore frap.keystore -alias frap -keyalg RSA -keysize 2048 -validity 10000 \
-              -storepass "$PASS" -keypass "$PASS" -dname "CN=FRAP Digital, C=MX"
+              -storepass "$PASS" -keypass "$PASS" -dname "CN=STEAP FRAP, C=MX"
             echo "pass=$PASS" >> "$GITHUB_OUTPUT"; echo "alias=frap" >> "$GITHUB_OUTPUT"
             echo "nueva=si" >> "$GITHUB_OUTPUT"
             mkdir -p llave
@@ -87,15 +87,15 @@ jobs:
           BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
           SIN_FIRMAR=$(find android/app/build/outputs/apk/release -name '*.apk' | head -1)
           "$BT/zipalign" -p -f 4 "$SIN_FIRMAR" alineado.apk
-          "$BT/apksigner" sign --ks frap.keystore --ks-pass "pass:$PASS" --ks-key-alias "$ALIAS" --key-pass "pass:$PASS" --out salida/FRAP-Digital.apk alineado.apk
-          "$BT/apksigner" verify salida/FRAP-Digital.apk
+          "$BT/apksigner" sign --ks frap.keystore --ks-pass "pass:$PASS" --ks-key-alias "$ALIAS" --key-pass "pass:$PASS" --out salida/STEAP-FRAP.apk alineado.apk
+          "$BT/apksigner" verify salida/STEAP-FRAP.apk
           AAB=$(find android/app/build/outputs/bundle/release -name '*.aab' | head -1)
-          cp "$AAB" salida/FRAP-Digital.aab
-          jarsigner -keystore frap.keystore -storepass "$PASS" -keypass "$PASS" -sigalg SHA256withRSA -digestalg SHA-256 salida/FRAP-Digital.aab "$ALIAS"
+          cp "$AAB" salida/STEAP-FRAP.aab
+          jarsigner -keystore frap.keystore -storepass "$PASS" -keypass "$PASS" -sigalg SHA256withRSA -digestalg SHA-256 salida/STEAP-FRAP.aab "$ALIAS"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: FRAP-Digital-APK
+          name: STEAP-FRAP-APK
           path: salida/
 
       - name: Guardar la llave nueva (SOLO la primera vez)
