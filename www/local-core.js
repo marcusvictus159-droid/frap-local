@@ -301,7 +301,7 @@
         const p = Perfil.get();
         if (!p || !Perfil.sesionActiva()) return sinPerfil();
         const fraps = await DB.all('fraps');
-        return jsonResp({ success: true, folio: siguienteFolio('CRM', fraps.map(f => f.folio)), nombre_paramedico: p.nombre });
+        return jsonResp({ success: true, folio: siguienteFolio('STEAP', fraps.map(f => f.folio)), nombre_paramedico: p.nombre });
     }
 
     async function hGuardia(fd) {
@@ -491,7 +491,7 @@
         // Si el folio ya existe (dos formularios abiertos a la vez) o viene como
         // marcador viejo "PENDIENTE-...", se asigna el siguiente libre.
         if (!folio || String(folio).startsWith('PENDIENTE-') || fraps.some(f => f.folio === folio)) {
-            folio = siguienteFolio('CRM', fraps.map(f => f.folio));
+            folio = siguienteFolio('STEAP', fraps.map(f => f.folio));
             d.folio = folio;
         }
         const ahora = new Date();

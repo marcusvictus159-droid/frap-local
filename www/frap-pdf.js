@@ -19,7 +19,7 @@
 
     const hex = (h) => { const n = parseInt(h.slice(1), 16); return rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255); };
     const C = {
-        rojo: hex('#cc0000'), borde: hex('#e0e0e0'), label: hex('#f8f9fa'), labelTxt: hex('#555555'),
+        rojo: hex('#14599a'), borde: hex('#e0e0e0'), label: hex('#f8f9fa'), labelTxt: hex('#555555'),
         txt: hex('#111111'), gris: hex('#777777'), blanco: hex('#ffffff'), negro: hex('#000000')
     };
 
@@ -316,14 +316,15 @@
         L.pag.drawText(fTxt, { x: PW - M - wF, y: L.y - 39, size: 11, font: fonts.bold, color: C.rojo });
         L.y -= altoCab + 4;
         L.pag.drawLine({ start: { x: M, y: L.y }, end: { x: PW - M, y: L.y }, thickness: 2.2, color: C.rojo });
-        L.y -= 9;
+        L.pag.drawLine({ start: { x: M, y: L.y - 2.6 }, end: { x: PW - M, y: L.y - 2.6 }, thickness: 1.8, color: hex('#f2dc00') });
+        L.y -= 12;
 
         const l = (t, o) => Object.assign({ t, k: 'l' }, o || {});
         const v = (t, o) => Object.assign({ t, k: 'v' }, o || {});
         const A4 = [18, 32, 18, 32];
 
         // I. Servicio y tripulación
-        L.seccion('I. Datos del Servicio y Tripulación', '#cc0000', A4, [
+        L.seccion('I. Datos del Servicio y Tripulación', '#14599a', A4, [
             [l('Fecha / Tipo'), v(formatearFecha(fecha) + ' | ' + B(g('tipo_servicio'))), l('Motivo atención'), v(V(g('motivo_atencion')) + ' (Pri: ' + V(g('prioridad_inicial')) + ')')],
             [l('Ubicación'), v(V(g('servicio_esquina')) + ', Mun. ' + V(g('servicio_municipio')) + ' (' + V(g('servicio_lugar_ocurrencia')) + ')' +
                 (ne('servicio_lat') && ne('servicio_lng') ? ' | ' + B('GPS: ') + V(ne('servicio_lat')) + ', ' + V(ne('servicio_lng')) + (ne('servicio_precision') ? ' (±' + V(ne('servicio_precision')) + ' m)' : '') : ''), { span: 3 })],
@@ -333,14 +334,14 @@
         ]);
 
         // II. Paciente
-        L.seccion('II. Datos del Paciente', '#cc0000', A4, [
+        L.seccion('II. Datos del Paciente', '#14599a', A4, [
             [l('Nombre'), v(B(g('nombre_paciente', 'No identificado')), { span: 3 })],
             [l('Edad / Género'), v(V(g('edad')) + ' años / ' + V(g('genero'))), l('Tel / Ocupación'), v(V(g('paciente_telefono')) + ' | ' + V(g('paciente_ocupacion')))],
             [l('Domicilio'), v(V(g('domicilio_paciente', 'No proporcionado')) + ' (C.P. ' + V(g('paciente_cp')) + ')', { span: 3 })]
         ]);
 
         // III. Evaluación clínica
-        L.seccion('III. Evaluación Clínica y SAMPLER', '#cc0000', A4, [
+        L.seccion('III. Evaluación Clínica y SAMPLER', '#14599a', A4, [
             [l('Vía aérea / Vent.'), v(V(evalViaAerea) + ' | ' + V(evalVent)), l('Glasgow (GCS)'), v(B(textoGcs))],
             [l('Pulsos / Piel'), v(V(evalPulsos) + ' | ' + V(evalPiel)),
                 ...(ne('pupila_od') && ne('pupila_oi') ? [l('Auscultación'), v(V(g('eval_auscultacion', '-')))] : [l('Pupilas / Ausc.'), v(V(g('eval_pupilas', '-')) + ' | ' + V(g('eval_auscultacion', '-')))])],
@@ -370,7 +371,7 @@
                 [v('[QUEM] QUEMADURAS', { span: 4, bg: '#fadbd8', color: '#c0392b', bold: true, size: 7.5 })],
                 [l('Grado'), v(V(g('quemados_grado'))), l('SCQ %'), v(B(g('quemados_porcentaje') + '%'))],
                 [l('Regiones'), v(V(g('quemados_regiones')), { span: 3 })]);
-            L.seccion('Situaciones críticas (X / TOX / Quemados)', '#d35400', A4, filas);
+            L.seccion('Situaciones críticas (X / TOX / Quemados)', '#1a6fb5', A4, filas);
         }
 
         // Gineco-obstétrico
@@ -385,7 +386,7 @@
                 [l('Hora nacim.'), v(V(g('parto_hora_nacimiento'))), l('Sexo'), v(V(g('parto_sexo')))],
                 [l('APGAR'), v(B(g('parto_apgar_1') + ' Pts') + ' (' + V(g('parto_apgar_eval')) + ')'), l('Reanimación'), v(V(g('parto_reanimacion')))],
                 [l('H. placenta'), v(V(g('parto_hora_placenta'))), l('Observac.'), v(V(g('parto_complicaciones')))]);
-            L.seccion('Evaluación gineco-obstétrica y parto', '#8e44ad', A4, filas);
+            L.seccion('Evaluación gineco-obstétrica y parto', '#0e3f70', A4, filas);
         }
 
         // Signos vitales
@@ -396,12 +397,12 @@
                 const pam = (isFinite(parseFloat(t.tas)) && isFinite(parseFloat(t.tad))) ? Math.round((parseFloat(t.tas) + 2 * parseFloat(t.tad)) / 3) : '-';
                 filas.push([t.hora, t.fc, t.fr, t.tas, t.tad, B(pam), t.sao2, t.temp, t.glucosa].map(x => ({ t: V(x) === '' ? '-' : (typeof x === 'string' && x.indexOf('\u0001') === 0 ? x : V(x)), k: 'v', al: 'c' })));
             });
-            L.seccion('Signos vitales y PAM', '#cc0000', [1.1, 1, 1, 1, 1, 1, 1, 1, 1.2], filas);
+            L.seccion('Signos vitales y PAM', '#14599a', [1.1, 1, 1, 1, 1, 1, 1, 1, 1.2], filas);
         }
 
         // IV. Trauma
         const rts = g('trauma_score') !== '' ? '\n' + B('RTS (Trauma Score): ') + V(g('trauma_score')) + ' Pts - ' + V(g('trauma_score_eval')) : '';
-        L.seccion('IV. Trauma y Lesiones', '#cc0000', [15, 50, 35], [[
+        L.seccion('IV. Trauma y Lesiones', '#14599a', [15, 50, 35], [[
             l('Cinemática'),
             v(B('Impacto: ') + V(g('trauma_impacto', 'No aplica')) + '\n' + B('Cinturón/Casco: ') + V(g('trauma_cinturon', 'No aplica')) + '\n' + B('Bolsas: ') + V(g('trauma_bolsas', 'No aplica')) +
                 '\n' + B('Estado: ') + V(g('trauma_estado', 'No aplica')) + rts),
@@ -409,7 +410,7 @@
         ]]);
 
         // V. Tratamiento y resolución
-        L.seccion('V. Tratamiento y Resolución del Servicio', '#cc0000', A4, [
+        L.seccion('V. Tratamiento y Resolución del Servicio', '#14599a', A4, [
             [l('V. aérea / O2'), v(V(tratVia) + ' | ' + V(tratO2)), l('Acceso venoso'), v(V(tratAcceso) + ' (' + V(tratSolucion) + ' - ' + V(tratVolumen) + ')')],
             ...(ne('insumos_utilizados') ? [[l('Insumos'), v(V(g('insumos_utilizados')), { span: 3 })]] : []),
             [l('Narrativa / Obs.'), v(V(g('observaciones')), { span: 3 })],
@@ -436,7 +437,7 @@
             filasLegal.push([v(B('Autoridad: ') + V(g('autoridad_corporacion')) + ' | ' + B('Oficial: ') + V(g('autoridad_oficial')) + ' | ' + B('Unidad: ') + V(g('autoridad_unidad')), { size: 7.5 })]);
         }
         if (ne('pertenencias_recibe')) filasLegal.push([v(B('Pertenencias recibe: ') + V(g('pertenencias_recibe')), { size: 7.5 })]);
-        L.seccion('VI. Marco legal - ' + V(tipoCons), '#34495e', [1], filasLegal);
+        L.seccion('VI. Marco legal - ' + V(tipoCons), '#0b1d33', [1], filasLegal);
 
         // Firmas
         const nombrePac = V(g('nombre_firma_paciente')).trim() !== '' ? V(g('nombre_firma_paciente')) : 'Paciente / Familiar / Testigo';
