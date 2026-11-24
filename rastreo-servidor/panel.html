@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#0a1429">
+<title>Panel de unidades · STEAP Paramédicos</title>
+<link rel="stylesheet" href="lib/leaflet/leaflet.css"><link rel="stylesheet" href="estilo.css">
+<style>
+ #login{margin:auto;width:min(92vw,380px);background:var(--card);border:1px solid var(--linea);border-radius:20px;padding:26px}
+ #login img{width:70%;display:block;margin:0 auto 14px}#login input{width:100%;padding:13px;border-radius:12px;border:1px solid var(--linea);background:#070d1c;color:var(--txt);font-size:1rem;margin:10px 0}
+ #login .err{color:#ff8a8a;min-height:1.3em;font-size:.9rem}
+ #app{display:none;flex:1;min-height:0}
+ #lado{width:340px;max-width:100%;overflow:auto;background:var(--card);border-right:1px solid var(--linea);padding:10px}
+ #mapa{flex:1}
+ .tarj{background:#0c1530;border:1px solid var(--linea);border-radius:14px;padding:12px;margin-bottom:10px;cursor:pointer}
+ .tarj:hover,.tarj.sel{border-color:var(--amarillo)}.tarj .u{font-weight:800;font-size:1.1rem}.tarj small{color:var(--sub)}
+ h3{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--sub);margin:12px 4px 8px}
+ .vacio{color:var(--sub);padding:14px 6px;font-size:.92rem}
+ .enlace{margin-top:8px;display:flex;gap:6px}.enlace button{flex:1;padding:7px;font-size:.8rem}
+ @media(max-width:760px){#app{flex-direction:column}#lado{width:100%;max-height:42vh;border-right:0;border-top:1px solid var(--linea);order:2}#mapa{min-height:46vh;order:1}}
+</style></head>
+<body>
+<div class="barra"><img src="steap-logo.png" alt="STEAP"><h1>Panel de unidades</h1><span class="esp"></span><span id="estado" style="color:var(--sub);font-size:.8rem"></span><button id="salir" hidden>Salir</button></div>
+<div id="login"><img src="steap-logo.png" alt="STEAP"><div style="text-align:center;color:var(--sub)">Entra con la contraseña del panel</div>
+ <input id="clave" type="password" placeholder="Contraseña" autocomplete="current-password"><div class="err" id="err"></div><button class="btn" style="width:100%" id="entrar">Entrar</button></div>
+<div id="app"><div id="lado"><h3>Unidades en servicio</h3><div id="activos"></div><h3>Servicios recientes</h3><div id="recientes"></div></div><div id="mapa"></div></div>
+<script src="lib/leaflet/leaflet.js"></script>
+<script>
+(function () {
+  var $ = function (i) { return document.getElementById(i); };
+  var mapa, marc = {}, lineas = {}, hist = null, sel = null, d0 = null, t0 = 0, timer = null, ajustado = false;
+  var TXT = { esperando: 'Esperando señal', en_ruta: 'En servicio', sin_senal: 'Sin señal', finalizado: 'Finalizado' };
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function hora(ts) { return ts ? new Date(ts * 1000).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : '—'; }
+  function fecha(ts) { return new Date(ts * 1000).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); }
+  function hace(seg) { if (seg < 0) seg = 0; if (seg < 60) return seg + ' s'; if (seg < 3600) return Math.floor(seg / 60) + ' min'; return Math.floor(seg / 3600) + ' h'; }
+  function api(a, cuerpo) {
+    var o = cuerpo ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ accion: a }, cuerpo)) } : { cache: 'no-store' };
+    return fetch('api.php' + (cuerpo ? '' : '?a=' + a), o).then(function (r) { return r.json(); });
+  }
+  function iconoPin(s) {
+    var cls = s.estado === 'finalizado' ? 'fin' : (s.estado === 'sin_senal' ? 'vieja' : '');
+    return L.divIcon({ className: '', iconSize: [26, 26], iconAnchor: [13, 13], html: '<div class="pin ' + cls + '"><i></i><span class="etq">' + esc(s.unidad || 'Unidad') + '</span></div>' });
+  }
+  function crearMapa() {
+    mapa = L.map('mapa').setView([16.17, -95.2], 11);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(mapa);
+  }
+  function enlaceVer(t) { return location.href.replace(/panel\.html.*$/, '') + 'ver.html?t=' + t; }
+  function tarjeta(s, activa) {
+    var h = '<div class="tarj' + (sel === s.token ? ' sel' : '') + '" data-t="' + s.token + '"><div class="fila" style="justify-content:space-between"><span class="u">' + esc(s.unidad || 'Unidad') + '</span><span class="chip ' + s.estado + '">' + TXT[s.estado] + '</span></div>' +
+      '<small>' + esc(s.tipo || '') + (s.tipo ? ' · ' : '') + 'Salió ' + fecha(s.inicio) + (s.fin ? ' · Fin ' + hora(s.fin) : '') + '</small>';
+    if (activa) h += '<div style="margin-top:6px;font-size:.88rem">' + (s.recibido ? 'Señal hace <b class="hace" data-r="' + s.recibido + '"></b>' : 'Sin ubicación todavía') + (s.vel != null ? ' · <b>' + Math.round(s.vel * 3.6) + ' km/h</b>' : '') + '</div>';
+    h += '<div class="enlace"><button class="btn sec" data-copiar="' + s.token + '">Copiar enlace</button>' + (s.lat != null ? '<button class="btn sec" data-ir="' + s.token + '">Ver</button>' : '') + '</div></div>';
+    return h;
+  }
+  function limpiarHist() { if (hist) { mapa.removeLayer(hist); hist = null; } }
+  function pintar(d) {
+    d0 = d.ahora; t0 = Date.now();
+    var act = d.activos, vistos = {};
+    $('activos').innerHTML = act.length ? act.map(function (s) { return tarjeta(s, true); }).join('') : '<div class="vacio">Ninguna unidad en servicio por ahora.</div>';
+    $('recientes').innerHTML = d.recientes.length ? d.recientes.map(function (s) { return tarjeta(s, false); }).join('') : '<div class="vacio">Sin servicios recientes.</div>';
+    var pts = [];
+    act.forEach(function (s) {
+      vistos[s.token] = 1;
+      if (s.lat == null) return;
+      var p = [s.lat, s.lng]; pts.push(p);
+      if (!marc[s.token]) marc[s.token] = L.marker(p, { icon: iconoPin(s) }).addTo(mapa).on('click', function () { elegir(s.token); });
+      else { marc[s.token].setLatLng(p); marc[s.token].setIcon(iconoPin(s)); }
+      var r = (d.rutas[s.token] || []).map(function (x) { return [x[0], x[1]]; });
+      if (!lineas[s.token]) lineas[s.token] = L.polyline(r, { color: '#ffef1a', weight: 4, opacity: .9 }).addTo(mapa); else lineas[s.token].setLatLngs(r);
+    });
+    Object.keys(marc).forEach(function (t) { if (!vistos[t]) { mapa.removeLayer(marc[t]); delete marc[t]; if (lineas[t]) { mapa.removeLayer(lineas[t]); delete lineas[t]; } } });
+    if (!ajustado && pts.length) { mapa.fitBounds(L.latLngBounds(pts), { padding: [60, 60], maxZoom: 15 }); ajustado = true; }
+    if (sel && marc[sel]) mapa.panTo(marc[sel].getLatLng());
+    tic();
+  }
+  function tic() { document.querySelectorAll('.hace').forEach(function (e) { e.textContent = hace(Math.round(d0 + (Date.now() - t0) / 1000 - Number(e.dataset.r))); }); }
+  function elegir(t) { sel = t; limpiarHist(); if (marc[t]) mapa.setView(marc[t].getLatLng(), Math.max(mapa.getZoom(), 15)); document.querySelectorAll('.tarj').forEach(function (e) { e.classList.toggle('sel', e.dataset.t === t); }); }
+  function verHist(t) {
+    api('ruta&t=' + t).then(function (d) {
+      if (!d.ok || !d.ruta.length) return;
+      sel = null; limpiarHist();
+      var pts = d.ruta.map(function (x) { return [x[0], x[1]]; });
+      hist = L.layerGroup([L.polyline(pts, { color: '#2f7bc4', weight: 4 }), L.circleMarker(pts[0], { radius: 7, color: '#2ecc71', fillOpacity: 1 }), L.circleMarker(pts[pts.length - 1], { radius: 7, color: '#ef4444', fillOpacity: 1 })]).addTo(mapa);
+      mapa.fitBounds(L.latLngBounds(pts), { padding: [50, 50] });
+    });
+  }
+  function cargar() {
+    api('activos').then(function (d) {
+      if (!d.ok) { mostrarLogin(); return; }
+      $('estado').textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-MX'); pintar(d);
+    }).catch(function () { $('estado').textContent = 'Sin conexión…'; });
+  }
+  function mostrarApp() {
+    $('login').style.display = 'none'; $('app').style.display = 'flex'; $('salir').hidden = false;
+    if (!mapa) crearMapa(); setTimeout(function () { mapa.invalidateSize(); }, 50);
+    cargar(); if (!timer) { timer = setInterval(cargar, 5000); setInterval(tic, 1000); }
+  }
+  function mostrarLogin() { $('login').style.display = 'block'; $('app').style.display = 'none'; $('salir').hidden = true; if (timer) { clearInterval(timer); timer = null; } }
+  $('lado').addEventListener('click', function (e) {
+    var c = e.target.closest('[data-copiar]'), i = e.target.closest('[data-ir]'), tj = e.target.closest('.tarj');
+    if (c) { e.stopPropagation(); var u = enlaceVer(c.dataset.copiar); (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(function () { c.textContent = '¡Copiado!'; }).catch(function () { prompt('Copia el enlace:', u); }); return; }
+    if (i) { e.stopPropagation(); elegir(i.dataset.ir); return; }
+    if (tj) { var s = tj.dataset.t; if (marc[s]) elegir(s); else verHist(s); }
+  });
+  $('entrar').onclick = function () {
+    $('err').textContent = '';
+    api('login', { clave: $('clave').value }).then(function (d) { if (d.ok) mostrarApp(); else $('err').textContent = d.error || 'No se pudo entrar'; }).catch(function () { $('err').textContent = 'Sin conexión con el servidor'; });
+  };
+  $('clave').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('entrar').click(); });
+  $('salir').onclick = function () { api('logout', {}).then(mostrarLogin); };
+  api('activos').then(function (d) { if (d.ok) mostrarApp(); }).catch(function () {});
+})();
+</script></body></html>

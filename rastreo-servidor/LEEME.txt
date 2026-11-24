@@ -1,0 +1,38 @@
+RASTREO EN VIVO · STEAP FRAP  (instalación en hosting compartido con PHP)
+=========================================================================
+
+QUÉ NECESITAS
+  - Tu hosting con PHP 7.4 o superior (casi todos) y HTTPS activo (el candadito).
+  - Extensión SQLite de PHP (viene activada en casi todos los hostings; en cPanel: "Select PHP Version" > Extensions > pdo_sqlite).
+
+PASOS
+ 1. Abre "config.php" con el editor de archivos de tu hosting (o en tu computadora antes de subir) y cambia:
+        CLAVE_APP   -> una clave larga de letras y números (mínimo 12). Va dentro del QR de la app.
+        CLAVE_PANEL -> la contraseña con la que TÚ entras al panel (mínimo 8).
+    Guárdalas en un lugar seguro. Mientras digan "CAMBIA-..." el sistema no funciona (es a propósito).
+ 2. En el Administrador de archivos de tu hosting entra a "public_html" y crea una carpeta llamada  rastreo
+    (puede llevar otro nombre; úsalo después en la dirección).
+ 3. Sube TODO el contenido de esta carpeta dentro de "rastreo" (api.php, config.php, panel.html, ver.html, index.html, LEEME,
+    estilo.css, steap-logo.png, .htaccess y las carpetas lib y datos). Si subes un .zip, extráelo ahí mismo.
+ 4. Abre en el navegador:   https://TU-DOMINIO/rastreo/panel.html   e inicia sesión con CLAVE_PANEL.
+    Si entra y ves "Ninguna unidad en servicio por ahora", el servidor quedó bien.
+ 5. Genera el QR de vinculación (archivo codigo-vinculacion-STEAP.html que viene junto a esta carpeta): además del token del bot y el ID del grupo, llena
+        Servidor de rastreo:  https://TU-DOMINIO/rastreo
+        Clave de la app:      tu CLAVE_APP
+    Cada paramédico escanea ese QR en Ajustes y listo (también se puede capturar a mano en Ajustes > Rastreo en vivo).
+
+CÓMO FUNCIONA
+  - Al "Salir a servicio" la app genera un enlace único, lo manda al grupo de Telegram y empieza a enviar el GPS del teléfono.
+  - Cualquiera con el enlace ve esa unidad en el mapa (solo unidad, tipo de servicio y ubicación; no nombres ni datos del paciente).
+  - Tú ves TODAS las unidades en panel.html, con su ruta, velocidad y hora de la última señal.
+  - Al cerrar el servicio en la app el rastreo se apaga y el enlace queda mostrando "Servicio finalizado" con la ruta recorrida.
+  - Las rutas se borran solas a los 30 días (cambia DIAS_HISTORIAL en config.php).
+
+IMPORTANTE
+  - Android: al salir a servicio la app pide permiso de ubicación "Permitir todo el tiempo" y muestra una notificación fija
+    mientras comparte (así Android deja el GPS funcionando con la pantalla apagada). En Xiaomi/Samsung conviene quitar el
+    ahorro de batería para la app (Ajustes del teléfono > Apps > STEAP FRAP > Batería > Sin restricciones).
+  - iPhone (versión web): solo envía mientras la app está abierta y la pantalla encendida; es un límite de Apple.
+  - Sin internet la app guarda la ruta y la manda completa cuando regresa la señal.
+  - Mapas: OpenStreetMap (gratuito; está pensado para un uso moderado como el de un panel de pocas unidades).
+  - Respaldo: copia de vez en cuando la carpeta "datos" si quieres conservar el historial.

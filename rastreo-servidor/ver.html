@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#0a1429">
+<title>Seguimiento en vivo · STEAP Paramédicos</title>
+<link rel="stylesheet" href="lib/leaflet/leaflet.css"><link rel="stylesheet" href="estilo.css"></head>
+<body>
+<div class="barra"><img src="steap-logo.png" alt="STEAP"><h1>Seguimiento en vivo</h1></div>
+<div id="aviso" class="aviso" hidden></div>
+<div id="mapa"></div>
+<div class="hoja" id="hoja" hidden>
+  <div class="fila" style="justify-content:space-between;margin-bottom:8px">
+    <div><div class="unidad" id="unidad">—</div><div style="color:var(--sub);font-size:.85rem" id="tipo"></div></div>
+    <span class="chip" id="chip">—</span>
+  </div>
+  <div class="fila" style="margin-bottom:12px">
+    <div class="dato"><small>Última señal</small><b id="hace">—</b></div>
+    <div class="dato"><small>Velocidad</small><b id="vel">—</b></div>
+    <div class="dato"><small>Salió</small><b id="salio">—</b></div>
+  </div>
+  <div class="fila"><button class="btn" id="centrar">Centrar unidad</button><a class="btn sec" id="gmaps" target="_blank" rel="noopener">Abrir en Google Maps</a></div>
+</div>
+<script src="lib/leaflet/leaflet.js"></script>
+<script>
+(function () {
+  var t = new URLSearchParams(location.search).get('t') || '';
+  var mapa, marcador, circulo, linea, sigue = true, t0 = 0, srv0 = 0, ult = null, primera = true;
+  var $ = function (i) { return document.getElementById(i); };
+  function aviso(h, p) { $('aviso').hidden = false; $('aviso').innerHTML = '<h2>' + h + '</h2><p>' + p + '</p>'; $('mapa').style.display = 'none'; $('hoja').hidden = true; }
+  function hora(ts) { return new Date(ts * 1000).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }); }
+  function hace(seg) { if (seg < 0) seg = 0; if (seg < 60) return seg + ' s'; if (seg < 3600) return Math.floor(seg / 60) + ' min'; return Math.floor(seg / 3600) + ' h ' + Math.floor((seg % 3600) / 60) + ' min'; }
+  var TXT = { esperando: 'Esperando señal', en_ruta: 'En servicio', sin_senal: 'Sin señal', finalizado: 'Servicio finalizado' };
+
+  function iniciarMapa(lat, lng) {
+    mapa = L.map('mapa', { zoomControl: true }).setView([lat, lng], 15);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(mapa);
+    mapa.on('dragstart', function () { sigue = false; });
+  }
+  function icono(s) {
+    var cls = s.estado === 'finalizado' ? 'fin' : (s.estado === 'sin_senal' ? 'vieja' : '');
+    return L.divIcon({ className: '', iconSize: [26, 26], iconAnchor: [13, 13], html: '<div class="pin ' + cls + '"><i></i><span class="etq">' + (s.unidad || 'Unidad').replace(/</g, '') + '</span></div>' });
+  }
+  function pintar(d) {
+    var s = d.servicio; srv0 = d.ahora; t0 = Date.now(); ult = s.recibido;
+    $('aviso').hidden = true; $('hoja').hidden = false;
+    $('unidad').textContent = s.unidad || 'Unidad'; $('tipo').textContent = s.tipo || '';
+    $('chip').textContent = TXT[s.estado] || s.estado; $('chip').className = 'chip ' + s.estado;
+    $('salio').textContent = hora(s.inicio);
+    $('vel').textContent = (s.vel != null && s.estado !== 'finalizado') ? Math.round(s.vel * 3.6) + ' km/h' : '—';
+    if (s.lat == null) { if (!mapa) iniciarMapa(16.1700, -95.2000); return; }  // aún sin ubicación
+    var p = [s.lat, s.lng];
+    if (!mapa) iniciarMapa(p[0], p[1]);
+    if (!marcador) { marcador = L.marker(p, { icon: icono(s), keyboard: false }).addTo(mapa); }
+    else { marcador.setLatLng(p); marcador.setIcon(icono(s)); }
+    if (!circulo) circulo = L.circle(p, { radius: s.acc || 0, color: '#2f7bc4', weight: 1, fillOpacity: .12 }).addTo(mapa);
+    else { circulo.setLatLng(p); circulo.setRadius(s.acc || 0); }
+    var pts = (d.ruta || []).map(function (r) { return [r[0], r[1]]; });
+    if (!linea) linea = L.polyline(pts, { color: '#ffef1a', weight: 4, opacity: .9 }).addTo(mapa); else linea.setLatLngs(pts);
+    if (primera && pts.length > 1) { mapa.fitBounds(linea.getBounds(), { padding: [40, 40], maxZoom: 16 }); primera = false; sigue = true; }
+    else if (sigue) mapa.panTo(p, { animate: true });
+    primera = false;
+    $('gmaps').href = 'https://www.google.com/maps/search/?api=1&query=' + s.lat + ',' + s.lng;
+  }
+  function tictac() {
+    if (ult == null) { $('hace').textContent = '—'; return; }
+    $('hace').textContent = 'hace ' + hace(Math.round(srv0 + (Date.now() - t0) / 1000 - ult));
+  }
+  function cargar() {
+    fetch('api.php?a=estado&t=' + encodeURIComponent(t), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d.ok) { if (!mapa) aviso('No encontramos este servicio', d.error || 'Verifica el enlace.'); return; }
+      pintar(d);
+    }).catch(function () { $('chip').textContent = 'Reconectando…'; });
+  }
+  if (!/^[a-f0-9]{24}$/.test(t)) { aviso('Enlace no válido', 'Pide el enlace de seguimiento nuevamente.'); return; }
+  $('centrar').onclick = function () { sigue = true; if (marcador) mapa.setView(marcador.getLatLng(), Math.max(mapa.getZoom(), 15)); };
+  cargar(); setInterval(cargar, 5000); setInterval(tictac, 1000);
+})();
+</script></body></html>

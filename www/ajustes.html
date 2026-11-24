@@ -25,6 +25,7 @@
     </style>
     <script src="app-config.js"></script>
     <script src="local-core.js"></script>
+    <script src="rastreo.js"></script>
     <script src="vendor/html5-qrcode.min.js"></script>
 <link rel="stylesheet" href="theme.css">
 </head>
@@ -66,6 +67,20 @@
                 <button type="button" id="btnDesvincular" class="btn btn-link text-danger w-100 small">Desvincular este teléfono</button>
             </div>
             <div id="msgTg" class="alert py-2 small mt-3 mb-0" style="display:none;"></div>
+        </div>
+
+        <!-- RASTREO EN VIVO -->
+        <div class="card-section">
+            <h6 class="fw-bold text-uppercase text-muted small mb-3"><i class="bi bi-geo-alt-fill me-1"></i> Rastreo en vivo de la unidad</h6>
+            <div id="estadoRastreo" class="mb-2"></div>
+            <p class="small text-muted mb-2">Al salir a servicio, la app comparte la ubicación de la unidad con tu panel y el aviso de Telegram incluye el enlace de seguimiento. Se configura sola al escanear el QR; si no, captura los datos aquí.</p>
+            <label class="form-label small fw-bold">Dirección del servidor</label>
+            <input id="rtUrl" class="form-control mb-2" autocomplete="off" placeholder="https://tudominio.com/rastreo">
+            <label class="form-label small fw-bold">Clave de la app</label>
+            <input id="rtClave" type="password" class="form-control mb-2" autocomplete="off" placeholder="CLAVE_APP">
+            <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" id="rtActivo" checked><label class="form-check-label small" for="rtActivo">Compartir ubicación al salir a servicio</label></div>
+            <div class="d-flex gap-2"><button type="button" id="btnRtProbar" class="btn btn-outline-primary flex-fill">Probar conexión</button><button type="button" id="btnRtGuardar" class="btn btn-cruz flex-fill">Guardar</button></div>
+            <div id="msgRt" class="alert py-2 small mt-3 mb-0" style="display:none;"></div>
         </div>
 
         <!-- INSTITUCIÓN -->
@@ -149,6 +164,7 @@
                 const r = await TG.verificar(cfg);
                 cfg.grupo = r.grupo;
                 TG.guardarCfg(cfg);
+                if (cfg.rastreo) { Rastreo.guardarCfg({ url: cfg.rastreo.url, clave: cfg.rastreo.clave, activo: true }); pintarRastreo(); }
                 pintarTelegram();
                 aviso('Listo: vinculado a «' + r.grupo + '» con el bot @' + r.bot + '.', 'success');
                 await Outbox.enviarPendientes();
@@ -179,6 +195,23 @@
         });
         $('btnCerrarLector').addEventListener('click', cerrarLector);
         $('btnVincular').addEventListener('click', () => vincular($('txtCodigo').value));
+        // ---------- Rastreo en vivo
+        function avisoRt(t, tipo) { const c = $('msgRt'); c.className = 'alert alert-' + tipo + ' py-2 small mt-3 mb-0'; c.textContent = t; c.style.display = 'block'; }
+        function pintarRastreo() {
+            const c = Rastreo.cfg();
+            if (c && c.url) { $('rtUrl').value = c.url; $('rtClave').value = c.clave || ''; $('rtActivo').checked = c.activo !== false; }
+            $('estadoRastreo').innerHTML = Rastreo.configurado() ? '<span class="badge text-bg-success">Activo</span> <span class="ms-1 small">' + esc(c.url) + '</span>' : '<span class="badge text-bg-secondary">' + (c && c.url ? 'Desactivado' : 'Sin configurar') + '</span>';
+        }
+        function guardarRt() { Rastreo.guardarCfg({ url: $('rtUrl').value, clave: $('rtClave').value, activo: $('rtActivo').checked }); pintarRastreo(); }
+        $('btnRtGuardar').addEventListener('click', () => { if (!$('rtUrl').value.trim() || !$('rtClave').value.trim()) return avisoRt('Escribe la dirección y la clave.', 'warning'); guardarRt(); avisoRt('Guardado.', 'success'); });
+        $('btnRtProbar').addEventListener('click', async () => {
+            if (!$('rtUrl').value.trim() || !$('rtClave').value.trim()) return avisoRt('Escribe la dirección y la clave.', 'warning');
+            guardarRt(); avisoRt('Probando…', 'info');
+            try { await Rastreo.probar(); avisoRt('Conexión correcta con tu servidor de rastreo.', 'success'); }
+            catch (e) { avisoRt(e.servidor ? e.message : 'No se pudo conectar. Revisa la dirección y que tengas internet.', 'danger'); }
+        });
+        pintarRastreo();
+
 
         $('btnPrueba').addEventListener('click', async () => {
             try {

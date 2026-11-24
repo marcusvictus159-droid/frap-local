@@ -22,7 +22,7 @@ shutil.copyfile("android-overlay/MainActivity.java", f"{PAQUETE_DIR}/MainActivit
 ruta = f"{APP}/AndroidManifest.xml"
 m = open(ruta, encoding="utf8").read()
 extra = ""
-for p in ("android.permission.CAMERA", "android.permission.RECORD_AUDIO", "android.permission.ACCESS_FINE_LOCATION", "android.permission.ACCESS_COARSE_LOCATION"):
+for p in ("android.permission.CAMERA", "android.permission.RECORD_AUDIO", "android.permission.ACCESS_FINE_LOCATION", "android.permission.ACCESS_COARSE_LOCATION", "android.permission.ACCESS_BACKGROUND_LOCATION", "android.permission.FOREGROUND_SERVICE", "android.permission.FOREGROUND_SERVICE_LOCATION", "android.permission.POST_NOTIFICATIONS", "android.permission.WAKE_LOCK"):
     if p not in m:
         extra += f'    <uses-permission android:name="{p}" />\n'
 for f in ("android.hardware.camera", "android.hardware.camera.autofocus", "android.hardware.location.gps"):

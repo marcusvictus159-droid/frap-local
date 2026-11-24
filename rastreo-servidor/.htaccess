@@ -1,0 +1,7 @@
+# Evita que se listen carpetas y protege archivos internos
+Options -Indexes
+<FilesMatch "^(config\.php)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+</FilesMatch>

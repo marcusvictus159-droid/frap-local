@@ -31,6 +31,10 @@
     <input id="chat" autocomplete="off" placeholder="-1001234567890">
     <label for="grupo">Nombre del grupo (opcional, solo para mostrarlo)</label>
     <input id="grupo" autocomplete="off" placeholder="Nombre del grupo">
+    <label for="srvUrl">Servidor de rastreo en vivo (opcional): dirección de la carpeta en tu hosting</label>
+    <input id="srvUrl" autocomplete="off" placeholder="https://tudominio.com/rastreo">
+    <label for="srvClave">Clave de la app del rastreo (CLAVE_APP de config.php)</label>
+    <input id="srvClave" autocomplete="off" placeholder="la que pusiste en config.php">
     <button id="btnGenerar" type="button">Generar código y QR</button>
     <div id="error" class="error"></div>
   </div>
@@ -57,10 +61,13 @@
   $('btnGenerar').addEventListener('click', () => {
     mostrarError('');
     const token = $('token').value.trim(), chat = $('chat').value.trim(), grupo = $('grupo').value.trim();
+    let srvUrl = $('srvUrl').value.trim().replace(/\/+$/, ''), srvClave = $('srvClave').value.trim();
+    if (srvUrl && !/^https?:\/\//i.test(srvUrl)) srvUrl = 'https://' + srvUrl;
+    if ((srvUrl && !srvClave) || (!srvUrl && srvClave)) return mostrarError('Para el rastreo escribe la dirección y la clave (o deja las dos vacías).');
     if (!/^\d{6,}:[A-Za-z0-9_-]{30,}$/.test(token)) return mostrarError('El token no parece válido (debe verse como 123456789:AAE…).');
     if (!/^-?\d+$/.test(chat) && !/^@\w+$/.test(chat)) return mostrarError('El ID del grupo debe ser un número como -1001234567890 (o @canal).');
     // Mismo formato que LocalApp.TG.codificarCodigo en la app.
-    const codigo = 'FRAP1:' + btoa(unescape(encodeURIComponent(JSON.stringify({ t: token, c: chat, g: grupo }))));
+    const codigo = 'FRAP1:' + btoa(unescape(encodeURIComponent(JSON.stringify(Object.assign({ t: token, c: chat, g: grupo }, srvUrl ? { u: srvUrl, k: srvClave } : {})))));
     $('codigo').value = codigo;
     try { const r = QRGen.crear(codigo, 'M'); dibujar(r.modulos, r.tamano); }
     catch (e) { return mostrarError('No se pudo hacer el QR: ' + e.message); }

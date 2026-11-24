@@ -153,10 +153,13 @@
             const token = String(obj.t || ''), chat = String(obj.c || '');
             if (!/^\d{6,}:[A-Za-z0-9_-]{30,}$/.test(token)) throw new Error('El token del bot no es válido.');
             if (!/^-?\d+$/.test(chat) && !/^@\w+$/.test(chat)) throw new Error('El id del grupo no es válido.');
-            return { token, chat, grupo: obj.g ? String(obj.g) : '' };
+            const rastreo = (obj.u && obj.k) ? { url: String(obj.u), clave: String(obj.k) } : null;
+            return { token, chat, grupo: obj.g ? String(obj.g) : '', rastreo };
         },
-        codificarCodigo(token, chat, grupo) {
-            const json = JSON.stringify({ t: token, c: chat, g: grupo || '' });
+        codificarCodigo(token, chat, grupo, urlRastreo, claveRastreo) {
+            const o = { t: token, c: chat, g: grupo || '' };
+            if (urlRastreo && claveRastreo) { o.u = urlRastreo; o.k = claveRastreo; }
+            const json = JSON.stringify(o);
             return 'FRAP1:' + btoa(unescape(encodeURIComponent(json)));
         },
 
@@ -362,12 +365,14 @@
             if (activo) return jsonResp({ success: true, servicio: activo, ya_existia: true });
             const d = cuerpo || {};
             const folio = siguienteFolio('SERV', todos.map(s => s.folio_servicio));
+            const rt = (window.Rastreo && Rastreo.configurado()) ? Rastreo.preparar() : null;   // enlace de seguimiento en vivo
             const reg = {
                 folio_servicio: folio, unidad: d.unidad || '', tipo_servicio: d.tipo_servicio || '', operador: d.operador || '',
                 jefe_servicio: d.jefe_servicio || p.nombre, auxiliares: d.auxiliares || '', km_salida: d.km_salida || null,
                 combustible_salida: d.combustible_salida || '', ubicacion_servicio: d.ubicacion_servicio || '',
                 fecha_salida: fechaLocalStr(), km_llegada: null, combustible_llegada: null, hospital_traslado: null,
-                fecha_llegada: null, estado: 'activo', id_usuario: p.clave, local_ref: d.local_servicio_ref || null
+                fecha_llegada: null, estado: 'activo', id_usuario: p.clave, local_ref: d.local_servicio_ref || null,
+                rastreo_token: rt ? rt.token : null
             };
             const id = await DB.add('servicios', reg);
             reservarFolio(folio);
@@ -376,8 +381,10 @@
                 tipo: 'msg',
                 html: '🚑 ' + b('SALIDA A SERVICIO') + '\nFolio: ' + folio + '\nUnidad: ' + v(d.unidad) + '\nTipo: ' + v(d.tipo_servicio) +
                     '\nOperador: ' + v(d.operador) + '\nJefe de servicio: ' + esc(d.jefe_servicio || p.nombre) + '\nAuxiliares: ' + v(d.auxiliares) +
-                    '\nKm de salida: ' + v(d.km_salida) + '\nCombustible: ' + v(d.combustible_salida) + '\nUbicación: ' + v(d.ubicacion_servicio)
+                    '\nKm de salida: ' + v(d.km_salida) + '\nCombustible: ' + v(d.combustible_salida) + '\nUbicación: ' + v(d.ubicacion_servicio) +
+                    (rt ? '\n\n📍 ' + b('Seguir la unidad en vivo:') + '\n<a href="' + esc(rt.link) + '">' + esc(rt.link) + '</a>' : '')
             });
+            if (rt) Rastreo.arrancar(rt.token, { folio: folio, unidad: d.unidad, tipo: d.tipo_servicio });
             Outbox.enviarPendientes();
             return jsonResp({ success: true, servicio: { id, folio_servicio: folio } });
         }
@@ -396,6 +403,7 @@
             s.fecha_llegada = fechaLocalStr();
             s.estado = 'cerrado';
             await DB.put('servicios', s);
+            if (s.rastreo_token && window.Rastreo) Rastreo.detener(s.rastreo_token);
             const v = (x) => esc(x || '—');
             await Outbox.agregar({
                 tipo: 'msg',
