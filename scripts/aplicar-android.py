@@ -28,6 +28,11 @@ for p in ("android.permission.CAMERA", "android.permission.RECORD_AUDIO", "andro
 for f in ("android.hardware.camera", "android.hardware.camera.autofocus", "android.hardware.location.gps"):
     if f not in m:
         extra += f'    <uses-feature android:name="{f}" android:required="false" />\n'
+# Servicio en primer plano del rastreo (Android 14 exige declarar el tipo "location"); se fusiona con el del plugin
+if "BackgroundGeolocationService" not in m:
+    if "xmlns:tools" not in m:
+        m = m.replace("<manifest ", '<manifest xmlns:tools="http://schemas.android.com/tools" ', 1)
+    m = m.replace("</application>", '    <service android:name="com.equimaps.capacitor_background_geolocation.BackgroundGeolocationService" android:enabled="true" android:exported="false" android:foregroundServiceType="location" tools:node="merge" />\n    </application>', 1)
 if extra:
     m = m.replace("</manifest>", extra + "</manifest>")
 open(ruta, "w", encoding="utf8").write(m)
