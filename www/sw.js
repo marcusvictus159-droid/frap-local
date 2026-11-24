@@ -4,7 +4,7 @@
 // Estrategia: "guardar al instante, actualizar en segundo plano". La app abre
 // siempre desde lo guardado (funciona sin internet) y, si hay red, baja la
 // versión nueva para la próxima vez. Sube VERSION cuando publiques cambios.
-const VERSION = 'steap-frap-v1';
+const VERSION = 'steap-frap-v2';
 const PRECACHE = [
   './', 'index.html', 'login.html', 'dashboard.html', 'frap.html', 'servicio.html',
   'checklist.html', 'perfil.html', 'ajustes.html', 'historial.html', 'calculadoras.html',
