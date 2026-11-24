@@ -32,7 +32,7 @@ for f in ("android.hardware.camera", "android.hardware.camera.autofocus", "andro
 if "BackgroundGeolocationService" not in m:
     if "xmlns:tools" not in m:
         m = m.replace("<manifest ", '<manifest xmlns:tools="http://schemas.android.com/tools" ', 1)
-    m = m.replace("</application>", '    <service android:name="com.equimaps.capacitor_background_geolocation.BackgroundGeolocationService" android:enabled="true" android:exported="false" android:foregroundServiceType="location" tools:node="merge" />\n    </application>', 1)
+    m = m.replace("</application>", '    <service android:name="com.equimaps.capacitor_background_geolocation.BackgroundGeolocationService" android:foregroundServiceType="location" tools:replace="android:foregroundServiceType" />\n    </application>', 1)
 if extra:
     m = m.replace("</manifest>", extra + "</manifest>")
 open(ruta, "w", encoding="utf8").write(m)
