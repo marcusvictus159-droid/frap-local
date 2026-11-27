@@ -109,7 +109,7 @@
         if (viejo) viejo.replaceWith(d); else document.getElementById('mapa').appendChild(d);
         return d;
     }
-    function avisoMapa(t) { const a = document.getElementById('avisoMapa'); a.textContent = t; a.style.display = 'block'; setTimeout(() => a.style.display = 'none', 9000); }
+    function avisoMapa(t) { const a = document.getElementById('avisoMapa'); a.textContent = t; a.style.display = 'block'; clearTimeout(avisoMapa.t); avisoMapa.t = setTimeout(() => a.style.display = 'none', 30000); }
     function motorLeaflet() {
         const m = L.map(nuevoLienzo(), { zoomControl: false, attributionControl: true }).setView(CENTRO, 12);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(m);
@@ -167,6 +167,23 @@
             }
         };
     }
+    // Google escribe el motivo exacto en la consola (p. ej. BillingNotEnabledMapError); lo mostramos en pantalla.
+    const MOTIVOS = {
+        BillingNotEnabledMapError: 'La facturación no está activa en el proyecto de la clave (vincula My First Project a la cuenta de facturación nueva).',
+        ApiNotActivatedMapError: 'Falta habilitar "Maps JavaScript API" en el proyecto de la clave.',
+        RefererNotAllowedMapError: 'La restricción de "Sitios web" de la clave no permite la app: agrega https://localhost/* (o quítala para probar).',
+        ApiTargetBlockedMapError: 'La clave tiene restricción de API que no incluye "Maps JavaScript API".',
+        InvalidKeyMapError: 'La clave no es válida (revisa que esté copiada completa).',
+        ExpiredKeyMapError: 'La clave expiró o fue borrada.',
+        DeletedApiProjectMapError: 'El proyecto de la clave fue borrado.',
+        MissingKeyMapError: 'No se envió la clave.'
+    };
+    (function () {
+        const orig = console.error.bind(console), orig2 = console.warn.bind(console);
+        const revisar = (args) => { const t = args.map(String).join(' '); const m = /([A-Za-z]+MapError)/.exec(t); if (m) avisoMapa('Google Maps: ' + m[1] + '. ' + (MOTIVOS[m[1]] || '')); };
+        console.error = function () { revisar([].slice.call(arguments)); orig.apply(null, arguments); };
+        console.warn = function () { revisar([].slice.call(arguments)); orig2.apply(null, arguments); };
+    })();
     function claveGoogle() {
         let k = ''; try { k = localStorage.getItem('google_maps_key') || ''; } catch (e) {}
         return k || (window.APP_INSTITUCION && window.APP_INSTITUCION.googleMapsKey) || window.GOOGLE_MAPS_KEY || '';
