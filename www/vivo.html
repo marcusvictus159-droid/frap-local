@@ -110,9 +110,22 @@
         return d;
     }
     function avisoMapa(t) { const a = document.getElementById('avisoMapa'); a.textContent = t; a.style.display = 'block'; clearTimeout(avisoMapa.t); avisoMapa.t = setTimeout(() => a.style.display = 'none', 30000); }
+    function claveMapTiler() { try { return localStorage.getItem('maptiler_key') || ''; } catch (e) { return ''; } }
     function motorLeaflet() {
         const m = L.map(nuevoLienzo(), { zoomControl: false, attributionControl: true }).setView(CENTRO, 12);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(m);
+        const mt = claveMapTiler();
+        if (mt) {
+            // MapTiler: calles (estilo tipo Google) y satélite con nombres
+            const atr = '<a href="https://www.maptiler.com/copyright/" target="_blank">© MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">© OpenStreetMap</a>';
+            const calles = L.tileLayer('https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key=' + encodeURIComponent(mt), { maxZoom: 20, attribution: atr });
+            const sat = L.tileLayer('https://api.maptiler.com/maps/hybrid/256/{z}/{x}/{y}.jpg?key=' + encodeURIComponent(mt), { maxZoom: 20, attribution: atr });
+            calles.addTo(m);
+            L.control.layers({ 'Mapa': calles, 'Satélite': sat }, null, { position: 'topleft', collapsed: false }).addTo(m);
+            let avisado = false;
+            calles.on('tileerror', () => { if (!avisado) { avisado = true; avisoMapa('MapTiler no respondió (revisa la clave o el límite mensual). Toca el icono del mapa para cambiarla.'); } });
+        } else {
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(m);
+        }
         L.control.zoom({ position: 'topright' }).addTo(m);
         const c = {};
         return {
@@ -318,9 +331,15 @@
 
     $('btnMapaCfg').addEventListener('click', () => {
         const actual = claveGoogle();
-        const v = prompt('Clave de API de Google Maps.\nDéjala vacía para usar el mapa libre (OpenStreetMap).', actual);
+        const v = prompt('Clave del mapa: pega tu clave de MapTiler o de Google Maps (empieza con AIza).\nDéjala vacía para usar el mapa libre (OpenStreetMap).', claveMapTiler() || actual);
         if (v === null) return;
-        try { if (v.trim()) { localStorage.setItem('google_maps_key', v.trim()); localStorage.setItem('google_maps_key_manual', '1'); } else { localStorage.removeItem('google_maps_key'); localStorage.setItem('google_maps_key_manual', '1'); } } catch (e) {}
+        try {
+            const c = v.trim();
+            localStorage.setItem('google_maps_key_manual', '1');
+            localStorage.removeItem('google_maps_key'); localStorage.removeItem('maptiler_key');
+            if (/^AIza/.test(c)) localStorage.setItem('google_maps_key', c);
+            else if (c) localStorage.setItem('maptiler_key', c);
+        } catch (e) {}
         location.reload();
     });
     iniciarMapa().then(() => { if (ultimo) pintar(ultimo); });
