@@ -59,7 +59,15 @@ function panel_sesion(): void {
         session_name('steap_panel'); session_start();
     }
 }
-function panel_ok(): bool { panel_sesion(); return !empty($_SESSION['panel']); }
+function panel_ok(): bool {
+    // La app (botón "Vista en vivo" del administrador) manda la contraseña del panel en cada consulta.
+    global $in;
+    if (is_array($in) && isset($in['clave_panel']) && is_string($in['clave_panel'])) {
+        if (hash_equals(CLAVE_PANEL, $in['clave_panel'])) return true;
+        usleep(600000); return false;
+    }
+    panel_sesion(); return !empty($_SESSION['panel']);
+}
 
 function fila_publica(array $s, int $ahora): array {
     $ult = $s['ult'] ? (int)$s['ult'] : null;
@@ -179,7 +187,7 @@ try {
         }
         case 'ruta': {
             if (!panel_ok()) falla('Sesión no iniciada.', 401);
-            $t = $_GET['t'] ?? '';
+            $t = $in['t'] ?? $_GET['t'] ?? '';
             if (!token_ok($t)) falla('Token no válido.');
             responder(['ok' => true, 'ruta' => ruta(db(), $t, 1500)]);
         }

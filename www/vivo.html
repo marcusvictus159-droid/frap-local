@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Vista en vivo - STEAP FRAP</title>
+    <meta name="theme-color" content="#000000">
+    <link href="vendor/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="vendor/bootstrap-icons.css">
+    <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+    <script src="app-config.js"></script>
+    <script src="local-core.js"></script>
+    <script src="rastreo.js"></script>
+    <link rel="stylesheet" href="theme.css">
+    <style>
+        html, body { height: 100%; margin: 0; overflow: hidden; background: #000; }
+        .barra { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; display: flex; align-items: center; gap: 12px;
+            padding: calc(10px + var(--status-bar-height, 24px)) 14px 10px; background: rgba(5, 11, 20, .92); border-bottom: 3px solid #f2dc00; }
+        .barra h1 { font-family: var(--titulo); font-weight: 800; font-size: 1.35rem; letter-spacing: .04em; margin: 0; flex: 1; text-transform: uppercase; color: #fff; }
+        .barra a, .barra button { color: #fff; background: none; border: 0; padding: 0; font-size: 1.5rem; line-height: 1; }
+        .vivo { display: inline-flex; align-items: center; gap: 6px; font: 700 .72rem system-ui, sans-serif; color: #9fb6cf; letter-spacing: .06em; text-transform: uppercase; }
+        .vivo i { width: 9px; height: 9px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 0 rgba(34, 197, 94, .7); animation: latido 1.8s infinite; }
+        .vivo.error i { background: #f5b301; animation: none; }
+        @keyframes latido { 70% { box-shadow: 0 0 0 9px rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
+        @media (prefers-reduced-motion: reduce) { .vivo i { animation: none; } }
+        #mapa { position: fixed; inset: 0; z-index: 1; background: #0b1622; }
+        #mapa .leaflet-top { top: calc(62px + var(--status-bar-height, 24px)); }
+        #mapa .leaflet-bottom { bottom: calc(var(--hoja, 0px) + 4px); }
+        .hoja { position: fixed; left: 0; right: 0; bottom: 0; z-index: 1000; max-height: 46vh; overflow-y: auto; background: rgba(9, 19, 31, .96);
+            border-top: 1px solid rgba(80, 160, 230, .3); border-radius: 18px 18px 0 0; padding: 10px 14px calc(14px + var(--nav-bar-height, 0px)); }
+        .hoja .asa { width: 42px; height: 4px; border-radius: 4px; background: rgba(255,255,255,.2); margin: 0 auto 10px; }
+        .hoja h2 { font-family: var(--titulo); font-size: 1.05rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #9fb6cf; margin: 0 0 8px; }
+        .unidad { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: #0e1c2e; border: 1px solid rgba(80, 160, 230, .2); border-radius: 14px; padding: 10px 12px; margin-bottom: 8px; color: #f3f7fc; }
+        .unidad.sel { border-color: #f2dc00; }
+        .unidad .num { font-family: var(--titulo); font-weight: 800; font-size: 1.6rem; min-width: 56px; text-align: center; color: #0b1d33; background: #f2dc00; border-radius: 10px; padding: 2px 6px; }
+        .unidad .det { flex: 1; min-width: 0; }
+        .unidad .det b { display: block; font-size: .95rem; }
+        .unidad .det span { color: #9fb6cf; font-size: .8rem; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .estado { font: 700 .7rem system-ui, sans-serif; padding: 3px 8px; border-radius: 8px; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+        .estado.en_ruta { background: rgba(34, 197, 94, .18); color: #86efac; }
+        .estado.esperando { background: rgba(26, 111, 181, .25); color: #a9cdf0; }
+        .estado.sin_senal { background: rgba(245, 179, 1, .18); color: #fcd34d; }
+        .vacio { color: #9fb6cf; text-align: center; padding: 14px 4px; font-size: .92rem; }
+        .marca { background: #f2dc00; color: #0b1d33; font: 800 13px/1 'Barlow Condensed', 'Arial Narrow', sans-serif; letter-spacing: .03em; padding: 5px 8px; border-radius: 10px; border: 2px solid #0b1d33; box-shadow: 0 2px 8px rgba(0,0,0,.5); white-space: nowrap; position: absolute; left: 8px; top: -8px; transform: translate(-50%, -100%); }
+        .marca::after { content: ''; position: absolute; left: 50%; bottom: -8px; margin-left: -6px; border: 6px solid transparent; border-top-color: #0b1d33; }
+        .marca.sin_senal { background: #8a9bb0; }
+        .punto { width: 16px; height: 16px; border-radius: 50%; background: #1a6fb5; border: 3px solid #fff; box-shadow: 0 0 0 3px rgba(26,111,181,.35); }
+        .acceso { position: fixed; inset: 0; z-index: 1100; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,.75); }
+        .acceso.ver { display: flex; }
+        .acceso .caja { width: 100%; max-width: 380px; background: #0e1c2e; border: 1px solid #1a6fb5; border-radius: 18px; padding: 20px; }
+        .acceso h3 { font-family: var(--titulo); font-weight: 800; text-transform: uppercase; font-size: 1.4rem; margin-bottom: 6px; }
+    </style>
+</head>
+<body>
+<div class="barra">
+    <a href="dashboard.html" aria-label="Volver"><i class="bi bi-arrow-left"></i></a>
+    <h1>Vista en vivo</h1>
+    <span class="vivo" id="indicador"><i></i><span id="txtIndicador">Conectando</span></span>
+    <button type="button" id="btnCentrar" aria-label="Ver todas las unidades"><i class="bi bi-fullscreen"></i></button>
+</div>
+<div id="mapa" role="application" aria-label="Mapa de unidades"></div>
+<div class="hoja">
+    <div class="asa"></div>
+    <h2 id="tituloLista">Unidades en servicio</h2>
+    <div id="lista"><div class="vacio">Cargando…</div></div>
+</div>
+
+<div class="acceso" id="acceso">
+    <form class="caja" id="formAcceso">
+        <h3>Acceso al rastreo</h3>
+        <p class="small text-muted mb-3">Escribe la contraseña del panel de rastreo (la misma con la que entras a panel.html). Se guarda solo en este teléfono.</p>
+        <label class="form-label small fw-bold" for="aUrl">Dirección del rastreo</label>
+        <input type="url" class="form-control mb-2" id="aUrl" placeholder="https://steap.services80.xyz/rastreo" required>
+        <label class="form-label small fw-bold" for="aClave">Contraseña del panel</label>
+        <input type="password" class="form-control mb-2" id="aClave" autocomplete="current-password" required>
+        <div class="alert alert-danger small py-2" id="aError" style="display:none"></div>
+        <button class="btn btn-warning fw-bold w-100" type="submit">Ver unidades</button>
+        <a href="dashboard.html" class="btn btn-link text-muted w-100 mt-1">Cancelar</a>
+    </form>
+</div>
+
+<script src="vendor/leaflet/leaflet.js"></script>
+<script>
+(function () {
+    const { Perfil, esc } = LocalApp;
+    const $ = (id) => document.getElementById(id);
+    const p = Perfil.get();
+    if (!p || !Perfil.sesionActiva()) { location.replace('login.html'); return; }
+    if (!p.admin) { location.replace('dashboard.html'); return; }
+
+    const K = 'vivo_acceso';
+    const leer = () => { try { return JSON.parse(localStorage.getItem(K) || 'null'); } catch (e) { return null; } };
+    const urlDefecto = () => { const c = window.Rastreo && Rastreo.cfg && Rastreo.cfg(); return (c && c.url) || 'https://steap.services80.xyz/rastreo'; };
+    let acceso = leer();
+    const TXT = { esperando: 'Esperando señal', en_ruta: 'En servicio', sin_senal: 'Sin señal' };
+
+    // ------------------------------------------------ mapa
+    const mapa = L.map('mapa', { zoomControl: false, attributionControl: true }).setView([15.77, -96.13], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(mapa);
+    L.control.zoom({ position: 'topright' }).addTo(mapa);
+    mapa.getContainer().style.top = '0';
+    const capas = {};           // token -> { marca, linea, punto }
+    let seleccion = null, primerAjuste = true, ultimo = null, timer = null;
+
+    function hace(seg) {
+        if (seg == null) return 'sin ubicación aún';
+        if (seg < 60) return 'hace ' + seg + ' s';
+        if (seg < 3600) return 'hace ' + Math.floor(seg / 60) + ' min';
+        return 'hace ' + Math.floor(seg / 3600) + ' h';
+    }
+    function ajustarTodo() {
+        const pts = Object.values(capas).filter(c => c.punto).map(c => c.punto.getLatLng());
+        if (pts.length === 1) mapa.setView(pts[0], 15);
+        else if (pts.length > 1) mapa.fitBounds(L.latLngBounds(pts), { paddingTopLeft: [50, 110], paddingBottomRight: [50, document.querySelector('.hoja').offsetHeight + 30] });
+    }
+
+    function pintar(d) {
+        ultimo = d;
+        const act = d.activos || [];
+        const vistos = {};
+        act.forEach(s => {
+            vistos[s.token] = true;
+            let c = capas[s.token];
+            if (!c) c = capas[s.token] = {};
+            const ruta = ((d.rutas || {})[s.token] || []).map(x => [x[0], x[1]]);
+            if (ruta.length > 1) {
+                if (!c.linea) c.linea = L.polyline(ruta, { color: '#1a6fb5', weight: 5, opacity: .85 }).addTo(mapa);
+                else c.linea.setLatLngs(ruta);
+            }
+            if (s.lat != null && s.lng != null) {
+                const ll = [s.lat, s.lng];
+                const icono = L.divIcon({ className: '', html: '<div class="punto"></div><div class="marca ' + s.estado + '">' + esc(s.unidad || 'Unidad') + '</div>', iconSize: [16, 16], iconAnchor: [8, 8] });
+                if (!c.punto) { c.punto = L.marker(ll, { icon: icono }).addTo(mapa); c.punto.on('click', () => enfocar(s.token)); }
+                else { c.punto.setLatLng(ll); c.punto.setIcon(icono); }
+            }
+        });
+        Object.keys(capas).forEach(t => {
+            if (vistos[t]) return;
+            const c = capas[t];
+            if (c.linea) mapa.removeLayer(c.linea);
+            if (c.punto) mapa.removeLayer(c.punto);
+            delete capas[t];
+        });
+        $('tituloLista').textContent = act.length ? 'Unidades en servicio (' + act.length + ')' : 'Unidades en servicio';
+        $('lista').innerHTML = act.length ? act.map(s => {
+            const seg = s.ult ? Math.max(0, d.ahora - s.ult) : null;
+            const vel = s.vel != null && s.vel > 0.5 ? ' · ' + Math.round(s.vel * 3.6) + ' km/h' : '';
+            return '<button type="button" class="unidad' + (seleccion === s.token ? ' sel' : '') + '" data-t="' + esc(s.token) + '">' +
+                '<span class="num">' + esc(s.unidad || '—') + '</span>' +
+                '<span class="det"><b>' + esc(s.tipo || 'Servicio') + '</b><span>' + esc(s.folio || '') + '</span><span>' + hace(seg) + vel + '</span></span>' +
+                '<span class="estado ' + s.estado + '">' + (TXT[s.estado] || s.estado) + '</span></button>';
+        }).join('') : '<div class="vacio"><i class="bi bi-check2-circle"></i> Ninguna unidad en servicio por ahora.<br><small>Aparecen aquí en cuanto registran una salida a servicio.</small></div>';
+        document.documentElement.style.setProperty('--hoja', document.querySelector('.hoja').offsetHeight + 'px');
+        if (primerAjuste && Object.values(capas).some(c => c.punto)) { ajustarTodo(); primerAjuste = false; }
+    }
+    function enfocar(t) {
+        seleccion = t;
+        const c = capas[t];
+        if (c && c.punto) mapa.setView(c.punto.getLatLng(), Math.max(mapa.getZoom(), 16), { animate: true });
+        if (ultimo) pintar(ultimo);
+    }
+    $('lista').addEventListener('click', (e) => { const b = e.target.closest('[data-t]'); if (b) enfocar(b.dataset.t); });
+    $('btnCentrar').addEventListener('click', () => { seleccion = null; ajustarTodo(); if (ultimo) pintar(ultimo); });
+
+    // ------------------------------------------------ datos
+    function indicador(ok, txt) { $('indicador').classList.toggle('error', !ok); $('txtIndicador').textContent = txt; }
+    async function consultar() {
+        if (!acceso) return;
+        const ctrl = new AbortController(); const tm = setTimeout(() => ctrl.abort(), 15000);
+        try {
+            const r = await fetch(acceso.url + '/api.php', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ accion: 'activos', clave_panel: acceso.clave }), signal: ctrl.signal });
+            const d = await r.json();
+            if (r.status === 401) { pedirAcceso('La contraseña del panel ya no es válida.'); return; }
+            if (!d.ok) throw new Error(d.error || 'Error');
+            pintar(d); indicador(true, 'En vivo');
+        } catch (e) {
+            indicador(false, navigator.onLine === false ? 'Sin internet' : 'Reintentando');
+        } finally { clearTimeout(tm); }
+    }
+    function arrancar() { clearInterval(timer); consultar(); timer = setInterval(() => { if (!document.hidden) consultar(); }, 8000); }
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) consultar(); });
+
+    function pedirAcceso(msg) {
+        clearInterval(timer);
+        $('aUrl').value = (acceso && acceso.url) || urlDefecto();
+        $('aClave').value = '';
+        $('aError').style.display = msg ? 'block' : 'none'; $('aError').textContent = msg || '';
+        $('acceso').classList.add('ver');
+        setTimeout(() => $('aClave').focus(), 60);
+    }
+    $('formAcceso').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        let url = $('aUrl').value.trim().replace(/\/+$/, '').replace(/\/(api\.php|panel\.html|ver\.html|index\.html)$/i, '');
+        if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+        const clave = $('aClave').value;
+        try {
+            const r = await fetch(url + '/api.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accion: 'activos', clave_panel: clave }) });
+            const d = await r.json();
+            if (!d.ok) throw new Error(r.status === 401 ? 'Contraseña incorrecta.' : (d.error || 'No se pudo entrar.'));
+            acceso = { url, clave }; localStorage.setItem(K, JSON.stringify(acceso));
+            $('acceso').classList.remove('ver');
+            pintar(d); indicador(true, 'En vivo'); arrancar();
+        } catch (err) {
+            $('aError').style.display = 'block';
+            $('aError').textContent = err.name === 'TypeError' ? 'No hay conexión con esa dirección. Revisa la dirección y tu internet.' : err.message;
+        }
+    });
+
+    if (acceso) arrancar(); else pedirAcceso('');
+})();
+</script>
+</body>
+</html>

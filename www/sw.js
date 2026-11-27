@@ -4,7 +4,7 @@
 // Estrategia: "guardar al instante, actualizar en segundo plano". La app abre
 // siempre desde lo guardado (funciona sin internet) y, si hay red, baja la
 // versión nueva para la próxima vez. Sube VERSION cuando publiques cambios.
-const VERSION = 'steap-frap-v5';
+const VERSION = 'steap-frap-v6';
 const PRECACHE = [
   './', 'index.html', 'login.html', 'dashboard.html', 'frap.html', 'servicio.html',
   'checklist.html', 'perfil.html', 'ajustes.html', 'historial.html', 'calculadoras.html',
@@ -12,7 +12,7 @@ const PRECACHE = [
   'icon-192.png', 'icon-512.png', 'silueta.png', 'steap-logo.png',
   'vendor/bootstrap.min.css', 'vendor/bootstrap.bundle.min.js', 'vendor/bootstrap-icons.css',
   'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css', 'vendor/fonts/barlow-condensed-latin-600-normal.woff2', 'vendor/fonts/barlow-condensed-latin-700-normal.woff2', 'vendor/fonts/barlow-condensed-latin-800-normal.woff2',
-  'vendor/pdf-lib.min.js', 'vendor/html5-qrcode.min.js', 'firma-pad.js', 'control.html', 'actualizador.js'
+  'vendor/pdf-lib.min.js', 'vendor/html5-qrcode.min.js', 'firma-pad.js', 'control.html', 'vivo.html', 'actualizador.js'
 ];
 
 self.addEventListener('install', (event) => {
