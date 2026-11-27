@@ -61,8 +61,8 @@
         
         #contenedorCanvasModal { position: relative; width: 100%; height: 75vh; border: 2px dashed var(--cruz-red); border-radius: 12px; background: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden; }
         #canvasFirmaModal { width: 100%; height: 100%; touch-action: none; position: absolute; top: 0; left: 0; z-index: 2; }
-        .marca-base-derecha { position: absolute; right: 0; top: 0; bottom: 0; width: 45px; background-color: rgba(204, 0, 0, 0.05); border-left: 2px dashed rgba(204, 0, 0, 0.3); display: flex; align-items: center; justify-content: center; z-index: 10; pointer-events: none; }
-        .marca-base-derecha span { transform: rotate(90deg); white-space: nowrap; color: rgba(204, 0, 0, 0.5); font-weight: 900; font-size: 1rem; letter-spacing: 2px; }
+        .marca-base-derecha { position: absolute; right: 0; top: 0; bottom: 0; width: 46px; background-color: #14599a; border-left: 3px solid #f2dc00; display: flex; align-items: center; justify-content: center; z-index: 10; pointer-events: none; }
+        .marca-base-derecha span { transform: rotate(90deg); white-space: nowrap; color: #f2dc00; font-weight: 900; font-size: 1rem; letter-spacing: 2px; }
     </style>
 <script src="app-config.js"></script>
     <script src="local-core.js"></script>
@@ -1044,11 +1044,11 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p class="text-muted small mb-3"><i class="bi bi-phone-landscape text-cruz"></i> Acuesta el teléfono. El <b>lado derecho</b> es la parte de abajo de la firma.</p>
+                <p class="text-muted small mb-3"><i class="bi bi-phone-landscape" style="color:#f2dc00"></i> Gira el teléfono hacia la izquierda: la <b style="color:#f2dc00">franja azul</b> queda <b>arriba</b> y firmas de forma normal.</p>
                 
                 <div id="contenedorCanvasModal">
                     <div class="marca-base-derecha">
-                        <span><i class="bi bi-arrow-right-square-fill"></i> BASE / LADO DERECHO <i class="bi bi-arrow-right-square-fill"></i></span>
+                        <span><i class="bi bi-arrow-up-circle-fill"></i> ESTE LADO VA HACIA ARRIBA <i class="bi bi-arrow-up-circle-fill"></i></span>
                     </div>
                     <canvas id="canvasFirmaModal"></canvas>
                 </div>
@@ -1276,7 +1276,7 @@
 
     function limpiarFirmaModal() { if (padFirmaModal) padFirmaModal.clear(); }
 
-    // Función modificada para rotar la imagen si el lado derecho es la base
+    // La firma se hace con el teléfono girado: el lado derecho (franja azul) es la parte de ARRIBA de la firma
     function guardarFirmaModal() {
         if (padFirmaModal.isEmpty()) { alert("La firma está vacía."); return; }
         const dataUrl = padFirmaModal.toDataURL('image/png');
