@@ -4,6 +4,11 @@ name: Compilar APK (Android)
 # cambias archivos de la app en la rama main.
 on:
   workflow_dispatch:
+    inputs:
+      notas:
+        description: 'Texto corto que verá el usuario en el aviso de actualización'
+        required: false
+        default: 'Mejoras y correcciones'
   push:
     branches: [main]
     paths: ['www/**', 'android-overlay/**', 'scripts/**', 'package.json', 'capacitor.config.json', '.github/workflows/build-apk.yml']
@@ -37,8 +42,13 @@ jobs:
       - name: Crear el proyecto Android y personalizarlo
         env:
           BASE: ${{ vars.VERSION_CODE_BASE }}
+          NOTAS: ${{ github.event.inputs.notas }}
         run: |
           CODE=$(( ${BASE:-100} + GITHUB_RUN_NUMBER ))
+          # Número de versión dentro de la app + archivo version.json para el aviso de actualización
+          printf "window.APP_BUILD = %s;\nwindow.APP_VERSION = '1.0.%s';\n" "$CODE" "$GITHUB_RUN_NUMBER" > www/version.js
+          mkdir -p salida
+          C=$CODE R=$GITHUB_RUN_NUMBER python3 -c "import json,os;json.dump({'versionCode':int(os.environ['C']),'versionName':'1.0.'+os.environ['R'],'apk':'https://services80.xyz/steap/STEAP-FRAP.apk','notas':os.environ.get('NOTAS') or 'Mejoras y correcciones'},open('salida/version.json','w'),ensure_ascii=False)" 
           npx cap add android
           python3 scripts/aplicar-android.py "$CODE" "1.0.${GITHUB_RUN_NUMBER}"
           npx cap sync android
