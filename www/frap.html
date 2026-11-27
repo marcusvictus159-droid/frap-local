@@ -20,7 +20,7 @@
     <link href="vendor/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="vendor/bootstrap-icons.css">
     
-    <script src="vendor/signature_pad.umd.min.js"></script>
+    <script src="firma-pad.js"></script>
     <style>
         :root { --cruz-red: #cc0000; --cruz-dark: #990000; }
         
@@ -1458,9 +1458,12 @@
 
     function prepararEnvio() {
         if (mapaModificado) { document.getElementById('base64_mapa_lesiones').value = canvasTrauma.toDataURL('image/png'); }
-        if (!padMedico.isEmpty()) { document.getElementById('base64_firma_medico').value = padMedico.toDataURL('image/png'); }
-        if (!padPaciente.isEmpty()) { document.getElementById('base64_firma_paciente').value = padPaciente.toDataURL('image/png'); }
-        if (!padParamedico.isEmpty()) { document.getElementById('base64_firma_paramedico').value = padParamedico.toDataURL('image/png'); }
+        // La firma ya quedó guardada (alta resolución) en el campo oculto al pulsar
+        // "Guardar Firma"; solo se toma del recuadro si por algo el campo está vacío.
+        [['medico', padMedico], ['paciente', padPaciente], ['paramedico', padParamedico]].forEach(([n, pad]) => {
+            const h = document.getElementById('base64_firma_' + n);
+            if (h && !h.value && pad && !pad.isEmpty()) h.value = pad.toDataURL('image/png');
+        });
     }
 
     document.getElementById('frapForm').addEventListener('submit', async function(e) {
