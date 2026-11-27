@@ -293,7 +293,7 @@
         const actual = claveGoogle();
         const v = prompt('Clave de API de Google Maps.\nDéjala vacía para usar el mapa libre (OpenStreetMap).', actual);
         if (v === null) return;
-        try { if (v.trim()) localStorage.setItem('google_maps_key', v.trim()); else localStorage.removeItem('google_maps_key'); } catch (e) {}
+        try { if (v.trim()) { localStorage.setItem('google_maps_key', v.trim()); localStorage.setItem('google_maps_key_manual', '1'); } else { localStorage.removeItem('google_maps_key'); localStorage.setItem('google_maps_key_manual', '1'); } } catch (e) {}
         location.reload();
     });
     iniciarMapa().then(() => { if (ultimo) pintar(ultimo); });

@@ -611,10 +611,15 @@
             if (!j.ok) { const err = new Error(j.error || 'Error del servidor.'); err.codigo = r.status; err.revocado = !!j.revocado; throw err; }
             return j;
         }
+        function guardarClaveMapa(pf) {
+            // La clave de Google Maps vive en el servidor (no en el código público) y solo llega al administrador.
+            try { if (pf && pf.google_maps_key && !localStorage.getItem('google_maps_key_manual')) localStorage.setItem('google_maps_key', pf.google_maps_key); } catch (e) {}
+        }
         async function login(usuario, clave) {
             const j = await llamar('login', { usuario: usuario, clave: clave, equipo: (navigator.userAgent || '').slice(0, 80) });
             const pf = j.perfil;
             localStorage.removeItem('sesion_revocada');
+            guardarClaveMapa(pf);
             return Perfil.guardar(pf.nombre, pf.rol, { usuario: pf.usuario, token: j.token, admin: !!pf.admin, id_servidor: pf.id });
         }
         let enCurso = null;
@@ -637,6 +642,7 @@
                 const j = await llamar('sync', { fraps: fraps, guardias: guardias, servicios: servicios });
                 const act = Perfil.get();
                 if (act && j.perfil) { act.admin = !!j.perfil.admin; act.rol = j.perfil.rol || act.rol; localStorage.setItem('perfil', JSON.stringify(act)); }
+                guardarClaveMapa(j.perfil);
                 localStorage.setItem('ultima_sync', String(Date.now()));
                 return j;
             })().catch(e => (e && e.revocado) ? { revocado: true } : null).finally(() => { enCurso = null; });

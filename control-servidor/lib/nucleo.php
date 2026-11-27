@@ -109,7 +109,9 @@ function usuario_por_token(string $t): ?array
 }
 function perfil_publico(array $u): array
 {
-    return ['id' => (int)$u['id'], 'usuario' => $u['usuario'], 'nombre' => $u['nombre'], 'rol' => $u['rol'], 'admin' => (bool)$u['admin']];
+    $p = ['id' => (int)$u['id'], 'usuario' => $u['usuario'], 'nombre' => $u['nombre'], 'rol' => $u['rol'], 'admin' => (bool)$u['admin']];
+    if ($p['admin'] && defined('GOOGLE_MAPS_KEY') && GOOGLE_MAPS_KEY) $p['google_maps_key'] = GOOGLE_MAPS_KEY;
+    return $p;
 }
 
 // ---------------------------------------------------------------- fechas

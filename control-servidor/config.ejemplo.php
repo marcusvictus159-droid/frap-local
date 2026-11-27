@@ -14,3 +14,6 @@ const SECRETO = 'PON-AQUI-UN-SECRETO-LARGO';
 
 const INSTITUCION = 'STEAP Paramédicos';
 const ZONA_HORARIA = 'America/Mexico_City';
+
+// Clave de Google Maps para la Vista en vivo (solo se envía a administradores).
+const GOOGLE_MAPS_KEY = '';
