@@ -55,6 +55,16 @@
         .radio-legal:checked + label { background-color: var(--cruz-red); color: white; border-color: var(--cruz-red); }
         
         #bannerInstalacion { display: none; }
+        .tipo-serv { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+        .tipo-serv label { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 8px 10px; min-width: 0; border-radius: 14px; border: 1.5px solid var(--linea, rgba(80,160,230,.2)); background: var(--campo, #060d16); color: var(--txt, #f3f7fc); cursor: pointer; transition: border-color .12s, background .12s, transform .08s; line-height: 1.15; }
+        .tipo-serv label.ancho { grid-column: 1 / -1; }
+        .tipo-serv label i { font-size: 1.15rem; color: var(--c); flex: 0 0 auto; width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: color-mix(in srgb, var(--c) 18%, transparent); }
+        .tipo-serv label span { font-family: var(--titulo, sans-serif); font-weight: 700; font-size: .98rem; letter-spacing: .02em; text-transform: uppercase; min-width: 0; overflow-wrap: break-word; hyphens: none; }
+        .tipo-serv label:active { transform: scale(.97); }
+        .tipo-serv .btn-check:checked + label { border-color: var(--c); background: color-mix(in srgb, var(--c) 16%, var(--campo, #060d16)); box-shadow: 0 0 0 1px var(--c) inset; }
+        .tipo-serv .btn-check:checked + label i { background: var(--c); color: #0b1d33; }
+        .tipo-serv .btn-check:focus-visible + label { outline: 2px solid #f2dc00; outline-offset: 2px; }
+
 
         .modal-firma .modal-content { border-radius: 0; }
         .modal-firma .modal-body { display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f8f9fa; }
@@ -92,16 +102,22 @@
             <div class="frap-step active" id="paso1">
                 <h5 class="mb-3 text-secondary fw-bold">1. Despacho y Servicio</h5><hr>
                 
-                <div class="row g-2 mb-3">
-                    <div class="col-6"><label class="form-label fw-bold">Folio</label><input type="text" class="form-control input-readonly form-control-sm" name="folio" value="Cargando..." id="campoFolio" readonly><small id="avisoFolioOffline" class="text-warning" style="display:none;">⚠️ Folio provisional (sin conexión)</small></div>
-                    <div class="col-6">
-                        <label class="form-label fw-bold">Tipo Servicio</label>
-                        <select class="form-select form-select-sm" name="tipo_servicio">
-                            <option value="Clínico">Clínico</option>
-                            <option value="Trauma">Traumático</option>
-                            <option value="Gineco-Obstetrico">Gineco-Obstétrico</option>
-                            <option value="Evento especial">Evento especial</option>
-                        </select>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Folio</label><input type="text" class="form-control input-readonly form-control-sm" name="folio" value="Cargando..." id="campoFolio" readonly><small id="avisoFolioOffline" class="text-warning" style="display:none;">⚠️ Folio provisional (sin conexión)</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold d-block">Tipo de servicio</label>
+                    <div class="tipo-serv" role="radiogroup" aria-label="Tipo de servicio">
+                        <input type="radio" class="btn-check" name="tipo_servicio" id="ts_clinico" value="Clínico" checked>
+                        <label for="ts_clinico" style="--c:#1a6fb5"><i class="bi bi-heart-pulse-fill"></i><span>Clínico</span></label>
+                        <input type="radio" class="btn-check" name="tipo_servicio" id="ts_trauma" value="Trauma">
+                        <label for="ts_trauma" style="--c:#e04848"><i class="bi bi-bandaid-fill"></i><span>Traumático</span></label>
+                        <input type="radio" class="btn-check" name="tipo_servicio" id="ts_gineco" value="Gineco-Obstetrico">
+                        <label for="ts_gineco" style="--c:#c06ad8"><i class="bi bi-gender-female"></i><span>Gineco-Obstétrico</span></label>
+                        <input type="radio" class="btn-check" name="tipo_servicio" id="ts_evento" value="Evento especial">
+                        <label for="ts_evento" style="--c:#f2dc00"><i class="bi bi-calendar-event-fill"></i><span>Evento especial</span></label>
+                        <input type="radio" class="btn-check" name="tipo_servicio" id="ts_domicilio" value="Traslado a domicilio">
+                        <label for="ts_domicilio" class="ancho" style="--c:#2fb37a"><i class="bi bi-house-heart-fill"></i><span>Traslado a domicilio</span></label>
                     </div>
                 </div>
 
@@ -1318,6 +1334,12 @@
         if (ver) { i.focus(); b.innerHTML = '<i class="bi bi-x-lg"></i> Usar el de mi perfil'; }
         else { i.value = ''; b.innerHTML = '<i class="bi bi-pencil"></i> Poner manualmente'; autoGuardarFantasma(); }
     }
+    document.addEventListener('change', function (e) {
+        if (e.target && e.target.name === 'tipo_servicio' && e.target.value === 'Traslado a domicilio') {
+            const r = document.getElementById('resolucionFinal');
+            if (r) { r.value = 'Traslado a Domicilio'; actualizarDestinoTraslado(); }
+        }
+    });
     function actualizarDestinoTraslado() {
         const dom = document.getElementById('resolucionFinal').value === 'Traslado a Domicilio';
         document.getElementById('bloqueHospital').style.display = dom ? 'none' : 'block';

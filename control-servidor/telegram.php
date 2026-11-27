@@ -49,7 +49,7 @@ try {
                 $p = interpretar_periodo($partes, 'mes'); if (!$p) { $responder($errorFecha); break; }
                 $e = estadisticas($p[0], $p[1]); $c = $e['por_categoria'];
                 $mandarPdf('servicios_por_tipo_' . $p[0] . '.pdf', pdf_tipos($p[0], $p[1]),
-                    "📊 <b>Servicios por tipo</b> · " . fmt_periodo($p[0], $p[1]) . "\n🩺 Clínicos: {$c['Clínico']}\n🦴 Traumáticos: {$c['Traumático']}\n🤰 Gineco-obstétricos: {$c['Gineco-Obstétrico']}\n🎪 Eventos especiales: {$c['Evento especial']}\n<b>Total FRAP: {$e['totales']['fraps']}</b>");
+                    "📊 <b>Servicios por tipo</b> · " . fmt_periodo($p[0], $p[1]) . "\n🩺 Clínicos: {$c['Clínico']}\n🦴 Traumáticos: {$c['Traumático']}\n🤰 Gineco-obstétricos: {$c['Gineco-Obstétrico']}\n🎪 Eventos especiales: {$c['Evento especial']}\n🏠 Traslados a domicilio: {$c['Traslado a domicilio']}\n<b>Total FRAP: {$e['totales']['fraps']}</b>");
                 break;
             }
             $p = interpretar_periodo($partes, 'hoy'); if (!$p) { $responder($errorFecha); break; }
@@ -63,7 +63,7 @@ try {
             $p = interpretar_periodo($partes, 'mes'); if (!$p) { $responder($errorFecha); break; }
             $e = estadisticas($p[0], $p[1]); $c = $e['por_categoria'];
             $mandarPdf('servicios_por_tipo_' . $p[0] . '.pdf', pdf_tipos($p[0], $p[1]),
-                "📊 <b>Servicios por tipo</b> · " . fmt_periodo($p[0], $p[1]) . "\n🩺 Clínicos: {$c['Clínico']}\n🦴 Traumáticos: {$c['Traumático']}\n🤰 Gineco-obstétricos: {$c['Gineco-Obstétrico']}\n🎪 Eventos especiales: {$c['Evento especial']}\n<b>Total FRAP: {$e['totales']['fraps']}</b>");
+                "📊 <b>Servicios por tipo</b> · " . fmt_periodo($p[0], $p[1]) . "\n🩺 Clínicos: {$c['Clínico']}\n🦴 Traumáticos: {$c['Traumático']}\n🤰 Gineco-obstétricos: {$c['Gineco-Obstétrico']}\n🎪 Eventos especiales: {$c['Evento especial']}\n🏠 Traslados a domicilio: {$c['Traslado a domicilio']}\n<b>Total FRAP: {$e['totales']['fraps']}</b>");
             break;
 
         case 'guardias':

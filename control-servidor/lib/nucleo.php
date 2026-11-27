@@ -5,7 +5,7 @@ require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/pdf.php';
 date_default_timezone_set(ZONA_HORARIA);
 
-const CATEGORIAS = ['Clínico', 'Traumático', 'Gineco-Obstétrico', 'Evento especial', 'Otro'];
+const CATEGORIAS = ['Clínico', 'Traumático', 'Gineco-Obstétrico', 'Evento especial', 'Traslado a domicilio', 'Otro'];
 const COLORES = ['#1a6fb5', '#d23b3b', '#b0479a', '#e0b400', '#7a8797', '#2f9e6e', '#e07a1f', '#5b5fc7'];
 
 function db(): PDO
@@ -58,6 +58,7 @@ function contiene(string $h, string $n): bool { return $n === '' || strpos($h, $
 function categoria(string $tipo): string
 {
     $t = mb_strtolower($tipo);
+    if (contiene($t, 'domicilio')) return 'Traslado a domicilio';
     if (contiene($t, 'trauma')) return 'Traumático';
     if (contiene($t, 'gineco') || contiene($t, 'obst')) return 'Gineco-Obstétrico';
     if (contiene($t, 'evento')) return 'Evento especial';
@@ -341,7 +342,7 @@ function pdf_tipos(string $desde, string $hasta): string
     $r = new Reporte('Servicios por tipo', fmt_periodo($desde, $hasta));
     $c = $e['por_categoria'];
     $r->tarjetas(['Total FRAP' => $e['totales']['fraps'], 'Clínicos' => $c['Clínico'], 'Traumáticos' => $c['Traumático'],
-        'Gineco-Obst.' => $c['Gineco-Obstétrico'], 'Eventos esp.' => $c['Evento especial']]);
+        'Gineco-Obst.' => $c['Gineco-Obstétrico'], 'Eventos esp.' => $c['Evento especial'], 'A domicilio' => $c['Traslado a domicilio']]);
     $r->seccion('Sumatoria por tipo de servicio');
     $sin = array_filter($c, fn($v, $k) => $k !== 'Otro' || $v > 0, ARRAY_FILTER_USE_BOTH);
     $r->barras($sin);
