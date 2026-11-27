@@ -193,11 +193,14 @@
         e.preventDefault();
         let url = $('aUrl').value.trim().replace(/\/+$/, '').replace(/\/(api\.php|panel\.html|ver\.html|index\.html)$/i, '');
         if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
-        const clave = $('aClave').value;
+        const clave = $('aClave').value.trim();
         try {
             const r = await fetch(url + '/api.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accion: 'activos', clave_panel: clave }) });
             const d = await r.json();
-            if (!d.ok) throw new Error(r.status === 401 ? 'Contraseña incorrecta.' : (d.error || 'No se pudo entrar.'));
+            if (!d.ok) {
+                if (/sesi[oó]n no iniciada/i.test(d.error || '')) throw new Error('El servidor de rastreo todavía tiene la versión anterior. Reemplaza el archivo api.php dentro de la carpeta rastreo de tu hosting y vuelve a intentar.');
+                throw new Error(r.status === 401 ? 'Contraseña incorrecta. Escríbela igual que en panel.html (respeta mayúsculas).' : (d.error || 'No se pudo entrar.'));
+            }
             acceso = { url, clave }; localStorage.setItem(K, JSON.stringify(acceso));
             $('acceso').classList.remove('ver');
             pintar(d); indicador(true, 'En vivo'); arrancar();

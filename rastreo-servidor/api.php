@@ -177,7 +177,7 @@ try {
         case 'logout': panel_sesion(); $_SESSION = []; session_destroy(); responder(['ok' => true]);
 
         case 'activos': {
-            if (!panel_ok()) falla('Sesión no iniciada.', 401);
+            if (!panel_ok()) falla(isset($in['clave_panel']) ? 'Contraseña del panel incorrecta.' : 'Sesión no iniciada.', 401);
             $db = db();
             $act = array_map(fn($s) => fila_publica($s, $ahora), $db->query('SELECT * FROM servicios WHERE estado="activo" ORDER BY inicio DESC')->fetchAll());
             $rec = array_map(fn($s) => fila_publica($s, $ahora), $db->query('SELECT * FROM servicios WHERE estado!="activo" ORDER BY fin DESC LIMIT 25')->fetchAll());
@@ -186,7 +186,7 @@ try {
             responder(['ok' => true, 'ahora' => $ahora, 'activos' => $act, 'recientes' => $rec, 'rutas' => $rutas]);
         }
         case 'ruta': {
-            if (!panel_ok()) falla('Sesión no iniciada.', 401);
+            if (!panel_ok()) falla(isset($in['clave_panel']) ? 'Contraseña del panel incorrecta.' : 'Sesión no iniciada.', 401);
             $t = $in['t'] ?? $_GET['t'] ?? '';
             if (!token_ok($t)) falla('Token no válido.');
             responder(['ok' => true, 'ruta' => ruta(db(), $t, 1500)]);
