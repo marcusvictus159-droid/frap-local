@@ -26,6 +26,7 @@
         #mapa { position: fixed; inset: 0; z-index: 1; background: #0b1622; }
         #mapa .leaflet-top { top: calc(62px + var(--status-bar-height, 24px)); }
         #mapa .leaflet-bottom { bottom: calc(var(--hoja, 0px) + 4px); }
+        #mapa .gm-style .gmnoprint, #mapa .gm-style-mtc { margin-top: calc(62px + var(--status-bar-height, 24px)) !important; }
         .hoja { position: fixed; left: 0; right: 0; bottom: 0; z-index: 1000; max-height: 46vh; overflow-y: auto; background: rgba(9, 19, 31, .96);
             border-top: 1px solid rgba(80, 160, 230, .3); border-radius: 18px 18px 0 0; padding: 10px 14px calc(14px + var(--nav-bar-height, 0px)); }
         .hoja .asa { width: 42px; height: 4px; border-radius: 4px; background: rgba(255,255,255,.2); margin: 0 auto 10px; }
@@ -57,6 +58,7 @@
     <h1>Vista en vivo</h1>
     <span class="vivo" id="indicador"><i></i><span id="txtIndicador">Conectando</span></span>
     <button type="button" id="btnCentrar" aria-label="Ver todas las unidades"><i class="bi bi-fullscreen"></i></button>
+    <button type="button" id="btnMapaCfg" aria-label="Configurar mapa"><i class="bi bi-map"></i></button>
 </div>
 <div id="mapa" role="application" aria-label="Mapa de unidades"></div>
 <div class="hoja">
@@ -95,11 +97,86 @@
     const TXT = { esperando: 'Esperando señal', en_ruta: 'En servicio', sin_senal: 'Sin señal' };
 
     // ------------------------------------------------ mapa
-    const mapa = L.map('mapa', { zoomControl: false, attributionControl: true }).setView([15.77, -96.13], 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(mapa);
-    L.control.zoom({ position: 'topright' }).addTo(mapa);
-    mapa.getContainer().style.top = '0';
-    const capas = {};           // token -> { marca, linea, punto }
+    // Dos motores con la misma interfaz: Google Maps (si hay clave) u OpenStreetMap (Leaflet).
+    const CENTRO = [15.77, -96.13];
+    const padAbajo = () => (document.querySelector('.hoja').offsetHeight || 0) + 30;
+    function motorLeaflet() {
+        const m = L.map('mapa', { zoomControl: false, attributionControl: true }).setView(CENTRO, 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(m);
+        L.control.zoom({ position: 'topright' }).addTo(m);
+        const c = {};
+        return {
+            nombre: 'osm',
+            unidad(t, ll, html, clic) {
+                const ic = L.divIcon({ className: '', html: html, iconSize: [16, 16], iconAnchor: [8, 8] });
+                c[t] = c[t] || {};
+                if (!c[t].p) { c[t].p = L.marker(ll, { icon: ic }).addTo(m); c[t].p.on('click', clic); }
+                else { c[t].p.setLatLng(ll); c[t].p.setIcon(ic); }
+            },
+            ruta(t, pts) { c[t] = c[t] || {}; if (!c[t].l) c[t].l = L.polyline(pts, { color: '#1a6fb5', weight: 5, opacity: .85 }).addTo(m); else c[t].l.setLatLngs(pts); },
+            quitar(t) { if (!c[t]) return; if (c[t].l) m.removeLayer(c[t].l); if (c[t].p) m.removeLayer(c[t].p); delete c[t]; },
+            tokens() { return Object.keys(c); },
+            pos(t) { const p = c[t] && c[t].p; if (!p) return null; const q = p.getLatLng(); return [q.lat, q.lng]; },
+            ver(ll, z) { m.setView(ll, Math.max(m.getZoom(), z), { animate: true }); },
+            ajustar(pts) {
+                if (pts.length === 1) m.setView(pts[0], 15);
+                else if (pts.length > 1) m.fitBounds(L.latLngBounds(pts), { paddingTopLeft: [50, 110], paddingBottomRight: [50, padAbajo()] });
+            }
+        };
+    }
+    function motorGoogle() {
+        const g = google.maps;
+        const m = new g.Map(document.getElementById('mapa'), {
+            center: { lat: CENTRO[0], lng: CENTRO[1] }, zoom: 12, clickableIcons: false, streetViewControl: false, fullscreenControl: false,
+            mapTypeControl: true, mapTypeControlOptions: { position: g.ControlPosition.LEFT_TOP, mapTypeIds: ['roadmap', 'hybrid'] },
+            zoomControl: true, zoomControlOptions: { position: g.ControlPosition.RIGHT_TOP }, gestureHandling: 'greedy'
+        });
+        // Marca HTML propia (la misma etiqueta amarilla) sobre el mapa de Google
+        class Marca extends g.OverlayView {
+            constructor(ll, html, clic) { super(); this.ll = new g.LatLng(ll[0], ll[1]); this.div = document.createElement('div'); this.div.style.cssText = 'position:absolute;width:16px;height:16px;cursor:pointer'; this.div.innerHTML = html; this.div.addEventListener('click', clic); this.setMap(m); }
+            onAdd() { this.getPanes().overlayMouseTarget.appendChild(this.div); }
+            draw() { const p = this.getProjection().fromLatLngToDivPixel(this.ll); if (p) { this.div.style.left = (p.x - 8) + 'px'; this.div.style.top = (p.y - 8) + 'px'; } }
+            onRemove() { this.div.remove(); }
+            mover(ll, html) { this.ll = new g.LatLng(ll[0], ll[1]); this.div.innerHTML = html; this.draw(); }
+        }
+        const c = {};
+        return {
+            nombre: 'google',
+            unidad(t, ll, html, clic) { c[t] = c[t] || {}; if (!c[t].p) c[t].p = new Marca(ll, html, clic); else c[t].p.mover(ll, html); },
+            ruta(t, pts) {
+                c[t] = c[t] || {}; const path = pts.map(x => ({ lat: x[0], lng: x[1] }));
+                if (!c[t].l) c[t].l = new g.Polyline({ path, strokeColor: '#1a6fb5', strokeWeight: 5, strokeOpacity: .9, map: m }); else c[t].l.setPath(path);
+            },
+            quitar(t) { if (!c[t]) return; if (c[t].l) c[t].l.setMap(null); if (c[t].p) c[t].p.setMap(null); delete c[t]; },
+            tokens() { return Object.keys(c); },
+            pos(t) { const p = c[t] && c[t].p; return p ? [p.ll.lat(), p.ll.lng()] : null; },
+            ver(ll, z) { m.panTo({ lat: ll[0], lng: ll[1] }); if (m.getZoom() < z) m.setZoom(z); },
+            ajustar(pts) {
+                if (pts.length === 1) { m.setCenter({ lat: pts[0][0], lng: pts[0][1] }); m.setZoom(15); }
+                else if (pts.length > 1) { const b = new g.LatLngBounds(); pts.forEach(x => b.extend({ lat: x[0], lng: x[1] })); m.fitBounds(b, { top: 110, left: 50, right: 50, bottom: padAbajo() }); }
+            }
+        };
+    }
+    function claveGoogle() {
+        let k = ''; try { k = localStorage.getItem('google_maps_key') || ''; } catch (e) {}
+        return k || (window.APP_INSTITUCION && window.APP_INSTITUCION.googleMapsKey) || window.GOOGLE_MAPS_KEY || '';
+    }
+    let mapa = null;
+    function iniciarMapa() {
+        const k = claveGoogle();
+        if (!k) { mapa = motorLeaflet(); return Promise.resolve(); }
+        return new Promise((ok) => {
+            let listo = false;
+            const usarOsm = (motivo) => { if (listo) return; listo = true; console.warn('Google Maps no disponible:', motivo); document.getElementById('mapa').innerHTML = ''; mapa = motorLeaflet(); ok(); };
+            window.gm_authFailure = () => { listo = false; mapa = null; usarOsm('clave rechazada'); if (ultimo) pintar(ultimo); };
+            window.__gmListo = () => { if (listo) return; listo = true; try { mapa = motorGoogle(); } catch (e) { listo = false; usarOsm(e.message); return; } ok(); };
+            const sc = document.createElement('script');
+            sc.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(k) + '&callback=__gmListo&language=es&region=MX&loading=async&v=weekly';
+            sc.async = true; sc.onerror = () => usarOsm('sin conexión');
+            document.head.appendChild(sc);
+            setTimeout(() => usarOsm('tiempo agotado'), 12000);
+        });
+    }
     let seleccion = null, primerAjuste = true, ultimo = null, timer = null;
 
     function hace(seg) {
@@ -108,39 +185,23 @@
         if (seg < 3600) return 'hace ' + Math.floor(seg / 60) + ' min';
         return 'hace ' + Math.floor(seg / 3600) + ' h';
     }
-    function ajustarTodo() {
-        const pts = Object.values(capas).filter(c => c.punto).map(c => c.punto.getLatLng());
-        if (pts.length === 1) mapa.setView(pts[0], 15);
-        else if (pts.length > 1) mapa.fitBounds(L.latLngBounds(pts), { paddingTopLeft: [50, 110], paddingBottomRight: [50, document.querySelector('.hoja').offsetHeight + 30] });
-    }
+    function ajustarTodo() { if (mapa) mapa.ajustar(mapa.tokens().map(t => mapa.pos(t)).filter(Boolean)); }
 
     function pintar(d) {
         ultimo = d;
         const act = d.activos || [];
         const vistos = {};
-        act.forEach(s => {
-            vistos[s.token] = true;
-            let c = capas[s.token];
-            if (!c) c = capas[s.token] = {};
-            const ruta = ((d.rutas || {})[s.token] || []).map(x => [x[0], x[1]]);
-            if (ruta.length > 1) {
-                if (!c.linea) c.linea = L.polyline(ruta, { color: '#1a6fb5', weight: 5, opacity: .85 }).addTo(mapa);
-                else c.linea.setLatLngs(ruta);
-            }
-            if (s.lat != null && s.lng != null) {
-                const ll = [s.lat, s.lng];
-                const icono = L.divIcon({ className: '', html: '<div class="punto"></div><div class="marca ' + s.estado + '">' + esc(s.unidad || 'Unidad') + '</div>', iconSize: [16, 16], iconAnchor: [8, 8] });
-                if (!c.punto) { c.punto = L.marker(ll, { icon: icono }).addTo(mapa); c.punto.on('click', () => enfocar(s.token)); }
-                else { c.punto.setLatLng(ll); c.punto.setIcon(icono); }
-            }
-        });
-        Object.keys(capas).forEach(t => {
-            if (vistos[t]) return;
-            const c = capas[t];
-            if (c.linea) mapa.removeLayer(c.linea);
-            if (c.punto) mapa.removeLayer(c.punto);
-            delete capas[t];
-        });
+        if (mapa) {
+            act.forEach(s => {
+                vistos[s.token] = true;
+                const ruta = ((d.rutas || {})[s.token] || []).map(x => [x[0], x[1]]);
+                if (ruta.length > 1) mapa.ruta(s.token, ruta);
+                if (s.lat != null && s.lng != null) {
+                    mapa.unidad(s.token, [s.lat, s.lng], '<div class="punto"></div><div class="marca ' + s.estado + '">' + esc(s.unidad || 'Unidad') + '</div>', () => enfocar(s.token));
+                }
+            });
+            mapa.tokens().forEach(t => { if (!vistos[t]) mapa.quitar(t); });
+        }
         $('tituloLista').textContent = act.length ? 'Unidades en servicio (' + act.length + ')' : 'Unidades en servicio';
         $('lista').innerHTML = act.length ? act.map(s => {
             const seg = s.ult ? Math.max(0, d.ahora - s.ult) : null;
@@ -152,12 +213,12 @@
                 (seleccion === s.token ? '<button type="button" class="btn btn-outline-danger btn-sm w-100 mb-2" data-fin="' + esc(s.token) + '" data-un="' + esc(s.unidad || '') + '"><i class="bi bi-flag-fill"></i> Finalizar servicio de ' + esc(s.unidad || 'esta unidad') + '</button>' : '');
         }).join('') : '<div class="vacio"><i class="bi bi-check2-circle"></i> Ninguna unidad en servicio por ahora.<br><small>Aparecen aquí en cuanto registran una salida a servicio.</small></div>';
         document.documentElement.style.setProperty('--hoja', document.querySelector('.hoja').offsetHeight + 'px');
-        if (primerAjuste && Object.values(capas).some(c => c.punto)) { ajustarTodo(); primerAjuste = false; }
+        if (mapa && primerAjuste && mapa.tokens().some(t => mapa.pos(t))) { ajustarTodo(); primerAjuste = false; }
     }
     function enfocar(t) {
         seleccion = t;
-        const c = capas[t];
-        if (c && c.punto) mapa.setView(c.punto.getLatLng(), Math.max(mapa.getZoom(), 16), { animate: true });
+        const ll = mapa && mapa.pos(t);
+        if (ll) mapa.ver(ll, 16);
         if (ultimo) pintar(ultimo);
     }
     $('lista').addEventListener('click', async (e) => {
@@ -228,6 +289,14 @@
         }
     });
 
+    $('btnMapaCfg').addEventListener('click', () => {
+        const actual = claveGoogle();
+        const v = prompt('Clave de API de Google Maps.\nDéjala vacía para usar el mapa libre (OpenStreetMap).', actual);
+        if (v === null) return;
+        try { if (v.trim()) localStorage.setItem('google_maps_key', v.trim()); else localStorage.removeItem('google_maps_key'); } catch (e) {}
+        location.reload();
+    });
+    iniciarMapa().then(() => { if (ultimo) pintar(ultimo); });
     if (acceso) arrancar(); else pedirAcceso('');
 })();
 </script>
