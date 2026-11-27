@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Vista en vivo - STEAP FRAP</title>
     <meta name="theme-color" content="#000000">
+    <meta name="referrer" content="no-referrer">
     <link href="vendor/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="vendor/bootstrap-icons.css">
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
@@ -117,8 +118,8 @@
         if (mt) {
             // MapTiler: calles (estilo tipo Google) y satélite con nombres
             const atr = '<a href="https://www.maptiler.com/copyright/" target="_blank">© MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">© OpenStreetMap</a>';
-            const calles = L.tileLayer('https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key=' + encodeURIComponent(mt), { maxZoom: 20, attribution: atr });
-            const sat = L.tileLayer('https://api.maptiler.com/maps/hybrid/256/{z}/{x}/{y}.jpg?key=' + encodeURIComponent(mt), { maxZoom: 20, attribution: atr });
+            const calles = L.tileLayer('https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key=' + encodeURIComponent(mt), { maxZoom: 20, attribution: atr, referrerPolicy: 'no-referrer', crossOrigin: false });
+            const sat = L.tileLayer('https://api.maptiler.com/maps/hybrid/256/{z}/{x}/{y}.jpg?key=' + encodeURIComponent(mt), { maxZoom: 20, attribution: atr, referrerPolicy: 'no-referrer', crossOrigin: false });
             calles.addTo(m);
             L.control.layers({ 'Mapa': calles, 'Satélite': sat }, null, { position: 'topleft', collapsed: false }).addTo(m);
             let avisado = false;
