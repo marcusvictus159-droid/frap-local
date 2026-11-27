@@ -53,13 +53,15 @@ function ajuste(string $k, ?string $v = null): ?string
 
 function txt($v, int $n = 120): string { return mb_substr(trim((string)$v), 0, $n); }
 
+function contiene(string $h, string $n): bool { return $n === '' || strpos($h, $n) !== false; }
+
 function categoria(string $tipo): string
 {
     $t = mb_strtolower($tipo);
-    if (str_contains($t, 'trauma')) return 'Traumático';
-    if (str_contains($t, 'gineco') || str_contains($t, 'obst')) return 'Gineco-Obstétrico';
-    if (str_contains($t, 'evento')) return 'Evento especial';
-    if (str_contains($t, 'enfermedad') || str_contains($t, 'clín') || str_contains($t, 'clin')) return 'Clínico';
+    if (contiene($t, 'trauma')) return 'Traumático';
+    if (contiene($t, 'gineco') || contiene($t, 'obst')) return 'Gineco-Obstétrico';
+    if (contiene($t, 'evento')) return 'Evento especial';
+    if (contiene($t, 'enfermedad') || contiene($t, 'clín') || contiene($t, 'clin')) return 'Clínico';
     return $t === '' ? 'Otro' : 'Otro';
 }
 

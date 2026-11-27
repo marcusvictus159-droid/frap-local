@@ -156,7 +156,10 @@ try {
         $desde = (string)($in['desde'] ?? date('Y-m-01')); $hasta = (string)($in['hasta'] ?? date('Y-m-t'));
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $desde) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $hasta)) falla('Fechas no válidas.');
         $tipo = (string)($in['tipo'] ?? 'resumen');
-        $pdf = match ($tipo) { 'servicios' => pdf_servicios($desde, $hasta), 'tipos' => pdf_tipos($desde, $hasta), 'guardias' => pdf_guardias($desde, $hasta), default => pdf_resumen($desde, $hasta) };
+        if ($tipo === 'servicios') $pdf = pdf_servicios($desde, $hasta);
+        elseif ($tipo === 'tipos') $pdf = pdf_tipos($desde, $hasta);
+        elseif ($tipo === 'guardias') $pdf = pdf_guardias($desde, $hasta);
+        else $pdf = pdf_resumen($desde, $hasta);
         header('Content-Type: application/pdf');
         header('Content-Disposition: attachment; filename="reporte_' . $tipo . '_' . $desde . '.pdf"');
         echo $pdf; exit;
