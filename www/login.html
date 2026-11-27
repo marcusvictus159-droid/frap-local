@@ -38,40 +38,40 @@
             <i class="bi bi-exclamation-triangle-fill"></i> <span id="txtError"></span>
         </div>
 
-        <!-- Ya existe un perfil en este teléfono -->
+        <!-- Sesión guardada en este teléfono -->
         <div id="bloqueContinuar" style="display:none;">
-            <p class="text-muted mb-1">Perfil guardado en este teléfono</p>
-            <h5 class="fw-bold mb-3" id="txtPerfilGuardado"></h5>
+            <p class="text-muted mb-1">Sesión guardada en este teléfono</p>
+            <h5 class="fw-bold mb-1" id="txtPerfilGuardado"></h5>
+            <p class="small text-muted mb-3" id="txtUsuarioGuardado"></p>
             <button type="button" id="btnContinuar" class="btn btn-cruz w-100 shadow-sm">Continuar</button>
-            <button type="button" id="btnOtroPerfil" class="btn btn-link text-muted mt-3 small">No soy yo / editar mi perfil</button>
+            <button type="button" id="btnOtroPerfil" class="btn btn-link text-muted mt-3 small">Entrar con otro usuario</button>
         </div>
-
-        <!-- Perfil nuevo -->
-        <form id="formPerfil" style="display:none;">
-            <p class="text-muted small text-start">Tu perfil se guarda solo en este teléfono. Ya no hay usuario ni contraseña.</p>
+        <!-- Inicio de sesión -->
+        <form id="formLogin" style="display:none;" autocomplete="on">
+            <p class="text-muted small text-start" id="txtAvisoLogin">Entra con el usuario y la contraseña que te dio el administrador. La primera vez necesitas internet; después la app funciona sin señal.</p>
             <div class="mb-3 text-start">
-                <label class="form-label text-muted fw-bold small">Nombre completo</label>
+                <label class="form-label text-muted fw-bold small" for="usuario">Usuario</label>
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0"><i class="bi bi-person-fill text-muted"></i></span>
-                    <input type="text" id="nombre" class="form-control border-start-0 bg-light" placeholder="Ej. Juan Pérez Hernández" autocomplete="name" required minlength="5">
+                    <input type="text" id="usuario" class="form-control border-start-0 bg-light" placeholder="Ej. jperez01" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
                 </div>
             </div>
             <div class="mb-4 text-start">
-                <label class="form-label text-muted fw-bold small">Rol</label>
-                <select id="rol" class="form-select bg-light" style="border-radius:10px; padding:12px;">
-                    <option value="paramedico">Paramédico / Jefe de servicio</option>
-                    <option value="operador">Operador de ambulancia</option>
-                </select>
+                <label class="form-label text-muted fw-bold small" for="clave">Contraseña</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-lock-fill text-muted"></i></span>
+                    <input type="password" id="clave" class="form-control border-start-0 border-end-0 bg-light" autocomplete="current-password" required>
+                    <button type="button" class="input-group-text bg-light" id="btnVerClave" aria-label="Mostrar contraseña"><i class="bi bi-eye"></i></button>
+                </div>
             </div>
-            <button type="submit" id="btnGuardar" class="btn btn-cruz w-100 shadow-sm">Guardar y entrar</button>
+            <button type="submit" id="btnEntrar" class="btn btn-cruz w-100 shadow-sm">Entrar</button>
         </form>
     </div>
 </div>
-
 <script>
-    const { Perfil, TG } = LocalApp;
+    const { Perfil, TG, Nube } = LocalApp;
     const $ = (id) => document.getElementById(id);
-
+    function error(msg) { $('txtError').textContent = msg; $('cajaError').style.display = msg ? 'block' : 'none'; }
     function irAInicio() {
         Perfil.iniciarSesion();
         const destino = Perfil.pantallaInicio();
@@ -79,34 +79,50 @@
         // La primera vez, si Telegram no está vinculado, se pasa por Ajustes.
         window.location.href = TG.configurado() ? destino : 'ajustes.html?primera=1';
     }
-
-    function mostrarFormulario(precargar) {
+    function mostrarLogin() {
         $('bloqueContinuar').style.display = 'none';
-        $('formPerfil').style.display = 'block';
-        if (precargar) { $('nombre').value = precargar.nombre; $('rol').value = precargar.rol; }
-        $('btnGuardar').textContent = precargar ? 'Guardar cambios' : 'Guardar y entrar';
+        $('formLogin').style.display = 'block';
+        setTimeout(() => $('usuario').focus(), 50);
     }
-
     const perfil = Perfil.get();
-    if (perfil) {
+    if (localStorage.getItem('sesion_revocada')) {
+        error('Tu acceso cambió (te dieron de baja o te asignaron otra contraseña). Entra de nuevo con los datos que te dé el administrador.');
+    }
+    if (perfil && perfil.token) {
         $('txtPerfilGuardado').textContent = perfil.nombre;
+        $('txtUsuarioGuardado').textContent = 'Usuario: ' + (perfil.usuario || '') + (perfil.admin ? ' · Administrador' : '');
         $('bloqueContinuar').style.display = 'block';
         $('btnContinuar').addEventListener('click', irAInicio);
-        $('btnOtroPerfil').addEventListener('click', () => mostrarFormulario(perfil));
+        $('btnOtroPerfil').addEventListener('click', () => {
+            if (!confirm('¿Cerrar la sesión de ' + perfil.nombre + ' en este teléfono? Sus registros se quedan guardados aquí.')) return;
+            Nube.llamar('cerrar_sesion').catch(() => {});
+            const p = Perfil.get(); delete p.token; p.admin = false; localStorage.setItem('perfil', JSON.stringify(p));
+            Perfil.cerrarSesion();
+            mostrarLogin();
+        });
     } else {
-        mostrarFormulario(null);
+        if (perfil && !localStorage.getItem('sesion_revocada')) $('txtAvisoLogin').textContent = 'Ahora cada persona entra con su usuario y contraseña. Pídeselos al administrador. Tus registros guardados en este teléfono no se borran.';
+        mostrarLogin();
     }
-
-    $('formPerfil').addEventListener('submit', (e) => {
+    $('btnVerClave').addEventListener('click', () => {
+        const c = $('clave'); c.type = c.type === 'password' ? 'text' : 'password';
+        $('btnVerClave').innerHTML = c.type === 'password' ? '<i class="bi bi-eye"></i>' : '<i class="bi bi-eye-slash"></i>';
+    });
+    $('formLogin').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const nombre = $('nombre').value.trim();
-        if (nombre.split(/\s+/).length < 2) {
-            $('txtError').textContent = 'Escribe tu nombre completo (nombre y apellido).';
-            $('cajaError').style.display = 'block';
-            return;
+        error('');
+        const usuario = $('usuario').value.trim(), clave = $('clave').value;
+        if (!usuario || !clave) { error('Escribe tu usuario y tu contraseña.'); return; }
+        if (navigator.onLine === false) { error('Necesitas internet para entrar la primera vez. Conéctate e inténtalo de nuevo.'); return; }
+        const b = $('btnEntrar'); b.disabled = true; b.textContent = 'Entrando...';
+        try {
+            await Nube.login(usuario, clave);
+            Nube.sincronizar();
+            irAInicio();
+        } catch (err) {
+            error(err.red ? 'No hay conexión con el servidor. Revisa tu internet e inténtalo de nuevo.' : err.message);
+            b.disabled = false; b.textContent = 'Entrar';
         }
-        Perfil.guardar(nombre, $('rol').value);
-        irAInicio();
     });
 </script>
 </body>

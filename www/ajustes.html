@@ -110,9 +110,11 @@
             <h6 class="fw-bold text-uppercase text-muted small mb-3"><i class="bi bi-person-badge me-1"></i> Este teléfono</h6>
             <p class="mb-1"><b id="txtNombre"></b> · <span id="txtRol" class="text-muted"></span></p>
             <p class="small text-muted mb-3">Clave de folios: <code id="txtClave"></code></p>
-            <a href="login.html" class="btn btn-outline-secondary w-100 mb-2" id="lnkEditarPerfil">Cambiar nombre o rol</a>
-            <button type="button" id="btnRespaldo" class="btn btn-outline-secondary w-100"><i class="bi bi-download"></i> Exportar respaldo (guardias, servicios, FRAP)</button>
-            <p class="small text-muted mt-2 mb-0">Los datos viven solo en este teléfono. Si lo cambias o reinstalas la app, exporta el respaldo antes.</p>
+            <a href="login.html" class="btn btn-outline-secondary w-100 mb-2" id="lnkEditarPerfil">Cambiar de usuario</a>
+            <button type="button" id="btnRespaldo" class="btn btn-outline-secondary w-100 mb-2"><i class="bi bi-download"></i> Exportar respaldo (guardias, servicios, FRAP con PDF)</button>
+            <button type="button" id="btnImportar" class="btn btn-outline-secondary w-100"><i class="bi bi-upload"></i> Importar respaldo</button>
+            <input type="file" id="archivoRespaldo" accept=".json,application/json" style="display:none">
+            <p class="small text-muted mt-2 mb-0">Los datos viven en este teléfono. Antes de cambiarlo o reinstalar la app, exporta el respaldo; después impórtalo aquí y regresa tu historial (no se duplica lo que ya esté).</p>
         </div>
         <footer class="pie-derechos">
             <div>© <span id="anioPie"></span> <b>Otmar Cruz Dev</b></div>
@@ -233,6 +235,20 @@
             const datos = await exportarRespaldo();
             const nombre = 'respaldo_frap_' + Perfil.get().clave + '_' + new Date().toISOString().slice(0, 10) + '.json';
             await entregarArchivo(nombre, new Blob([JSON.stringify(datos, null, 1)], { type: 'application/json' }));
+        });
+        $('btnImportar').addEventListener('click', () => $('archivoRespaldo').click());
+        $('archivoRespaldo').addEventListener('change', async (e) => {
+            const f = e.target.files && e.target.files[0];
+            e.target.value = '';
+            if (!f) return;
+            try {
+                const datos = JSON.parse(await f.text());
+                const n = await LocalApp.importarRespaldo(datos);
+                const total = n.fraps + n.guardias + n.servicios + n.checklists;
+                aviso(total ? ('Respaldo importado: ' + n.fraps + ' FRAP, ' + n.guardias + ' guardias, ' + n.servicios + ' servicios, ' + n.checklists + ' checklists.') : 'Todo lo del respaldo ya estaba en este teléfono.', 'success');
+            } catch (err) {
+                aviso('No se pudo importar: ' + (err.message || 'archivo no válido'), 'danger');
+            }
         });
         $('lnkOmitir').addEventListener('click', (e) => { e.preventDefault(); location.href = Perfil.pantallaInicio(); });
 

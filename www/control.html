@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Control - STEAP FRAP</title>
+    <meta name="theme-color" content="#000000">
+    <link href="vendor/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="vendor/bootstrap-icons.css">
+    <script src="app-config.js"></script>
+    <script src="local-core.js"></script>
+    <link rel="stylesheet" href="theme.css">
+    <style>
+        :root { --amarillo: #f2dc00; --azul: #1a6fb5; }
+        html { background: #000; }
+        .navbar { padding-top: calc(0.5rem + var(--status-bar-height, 24px)) !important; }
+        .wrap { max-width: 620px; margin: 0 auto; padding: 0 14px 90px; }
+        .tabs { position: sticky; top: 0; z-index: 20; display: flex; gap: 4px; overflow-x: auto; padding: 10px 0; background: linear-gradient(180deg, #050b14 75%, transparent); scrollbar-width: none; }
+        .tabs::-webkit-scrollbar { display: none; }
+        .tab { flex: 0 0 auto; border: 1px solid var(--linea); background: var(--card2); color: var(--mut); border-radius: 999px; padding: 7px 14px; font-family: var(--titulo); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; font-size: .95rem; }
+        .tab[aria-selected="true"] { background: var(--amarillo); color: #0b1d33; border-color: var(--amarillo); }
+        .periodo { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+        .chip { border: 1px solid var(--linea); background: transparent; color: var(--txt); border-radius: 10px; padding: 5px 11px; font-size: .85rem; }
+        .chip[aria-pressed="true"] { background: var(--azul); border-color: var(--azul); }
+        .fechas { display: none; gap: 8px; margin-bottom: 12px; }
+        .fechas.ver { display: flex; }
+        .fechas input { flex: 1; }
+        .tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
+        .tile { background: var(--card); border: 1px solid var(--linea); border-radius: 14px; padding: 12px 14px; }
+        .tile b { display: block; font-family: var(--titulo); font-size: 2.1rem; line-height: 1; color: #fff; }
+        .tile span { color: var(--mut); font-size: .8rem; }
+        .tile.destacada { border-color: rgba(242, 220, 0, .55); }
+        .tile.destacada b { color: var(--amarillo); }
+        .panel { background: var(--card); border: 1px solid var(--linea); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+        .panel h6 { font-weight: 700; margin-bottom: 12px; color: #dfe9f5; }
+        .barra { display: grid; grid-template-columns: minmax(90px, 38%) 1fr auto; align-items: center; gap: 8px; margin: 7px 0; font-size: .86rem; }
+        .barra .et { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #dbe6f2; }
+        .barra .pista { height: 12px; background: rgba(255,255,255,.06); border-radius: 6px; overflow: hidden; }
+        .barra .rel { height: 100%; border-radius: 6px; }
+        .barra .val { font-weight: 700; min-width: 54px; text-align: right; font-variant-numeric: tabular-nums; }
+        .columnas svg { width: 100%; height: 170px; display: block; }
+        .fila { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--linea); }
+        .fila:last-child { border-bottom: 0; }
+        .fila .sub { color: var(--mut); font-size: .8rem; }
+        .etq { display: inline-block; font-size: .72rem; padding: 1px 7px; border-radius: 6px; background: rgba(26,111,181,.25); color: #cfe3f7; margin-right: 4px; }
+        .etq.admin { background: rgba(242,220,0,.18); color: var(--amarillo); }
+        .etq.baja { background: rgba(255,255,255,.08); color: var(--mut); }
+        .etq.guardia { background: rgba(34,197,94,.2); color: #86efac; }
+        .acciones { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+        .acciones .btn { font-size: .78rem; padding: 3px 9px; }
+        .credencial { background: #0b1d33; border: 2px solid var(--amarillo); border-radius: 14px; padding: 14px; margin-top: 12px; }
+        .credencial code { font-size: 1.15rem; color: #fff; background: rgba(255,255,255,.07); padding: 2px 8px; border-radius: 6px; user-select: all; }
+        .vacio { color: var(--mut); text-align: center; padding: 18px 6px; font-size: .9rem; }
+        .descargas { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .cmd { border-left: 3px solid var(--amarillo); padding: 4px 10px; margin: 8px 0; }
+        .cmd code { color: var(--amarillo); }
+        #estado { position: fixed; left: 50%; bottom: calc(18px + var(--nav-bar-height, 0px)); transform: translateX(-50%); z-index: 50; max-width: 92%; display: none; }
+        .cargando { opacity: .5; pointer-events: none; transition: opacity .15s; }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-dark bg-cruz shadow-sm">
+    <div class="container d-flex justify-content-between" style="max-width:620px">
+        <a href="dashboard.html" class="text-white text-decoration-none" aria-label="Volver"><i class="bi bi-arrow-left fs-4"></i></a>
+        <span class="navbar-brand mb-0 h1 fw-bold"><img src="steap-logo.png" alt="" style="height:26px;width:auto;vertical-align:middle;margin-right:6px;"> CONTROL</span>
+        <button type="button" id="btnRecargar" class="btn btn-link text-white p-0" aria-label="Actualizar"><i class="bi bi-arrow-clockwise fs-4"></i></button>
+    </div>
+</nav>
+
+<div class="wrap">
+    <div class="tabs" role="tablist">
+        <button class="tab" role="tab" data-tab="resumen" aria-selected="true">Resumen</button>
+        <button class="tab" role="tab" data-tab="personal" aria-selected="false">Personal</button>
+        <button class="tab" role="tab" data-tab="fraps" aria-selected="false">FRAP</button>
+        <button class="tab" role="tab" data-tab="guardias" aria-selected="false">Guardias</button>
+        <button class="tab" role="tab" data-tab="telegram" aria-selected="false">Telegram</button>
+    </div>
+
+    <div id="sinRed" class="alert alert-warning small" style="display:none"></div>
+
+    <div id="bloquePeriodo">
+        <div class="periodo" role="group" aria-label="Periodo">
+            <button class="chip" data-p="hoy">Hoy</button>
+            <button class="chip" data-p="7">7 días</button>
+            <button class="chip" data-p="mes" aria-pressed="true">Este mes</button>
+            <button class="chip" data-p="pasado">Mes pasado</button>
+            <button class="chip" data-p="rango">Fechas…</button>
+        </div>
+        <div class="fechas" id="fechas">
+            <input type="date" class="form-control form-control-sm" id="fDesde" aria-label="Desde">
+            <input type="date" class="form-control form-control-sm" id="fHasta" aria-label="Hasta">
+            <button class="btn btn-sm btn-primary" id="btnAplicar">Ver</button>
+        </div>
+    </div>
+
+    <!-- RESUMEN -->
+    <section data-sec="resumen">
+        <div class="tiles">
+            <div class="tile destacada"><b id="tFraps">–</b><span>FRAP registradas</span></div>
+            <div class="tile"><b id="tSalidas">–</b><span>Salidas de unidad</span></div>
+            <div class="tile"><b id="tHoras">–</b><span>Horas de guardia</span></div>
+            <div class="tile"><b id="tPersonal">–</b><span>Personal activo</span></div>
+        </div>
+        <div class="panel"><h6>Servicios por tipo</h6><div id="gTipos"></div></div>
+        <div class="panel columnas"><h6>FRAP por día</h6><div id="gDias"></div></div>
+        <div class="panel"><h6>Por unidad</h6><div id="gUnidad"></div></div>
+        <div class="panel"><h6>Dictamen final</h6><div id="gDictamen"></div></div>
+        <div class="panel"><h6>Desempeño por persona</h6><div id="lPersonas"></div></div>
+        <div class="panel">
+            <h6>Descargar reporte en PDF</h6>
+            <div class="descargas">
+                <button class="btn btn-outline-light btn-sm" data-pdf="resumen"><i class="bi bi-file-earmark-pdf"></i> Resumen</button>
+                <button class="btn btn-outline-light btn-sm" data-pdf="servicios"><i class="bi bi-file-earmark-pdf"></i> Servicios</button>
+                <button class="btn btn-outline-light btn-sm" data-pdf="tipos"><i class="bi bi-file-earmark-pdf"></i> Por tipo</button>
+                <button class="btn btn-outline-light btn-sm" data-pdf="guardias"><i class="bi bi-file-earmark-pdf"></i> Guardias</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- PERSONAL -->
+    <section data-sec="personal" hidden>
+        <div class="panel">
+            <h6>Agregar persona</h6>
+            <form id="formNuevo">
+                <input type="text" class="form-control mb-2" id="nNombre" placeholder="Nombre completo (nombre y apellidos)" autocomplete="off" required>
+                <div class="d-flex gap-2 mb-2">
+                    <select class="form-select" id="nRol" aria-label="Rol">
+                        <option value="paramedico">Paramédico / Jefe de servicio</option>
+                        <option value="operador">Operador de ambulancia</option>
+                    </select>
+                </div>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="nAdmin">
+                    <label class="form-check-label small" for="nAdmin">También es administrador (ve el botón Control)</label>
+                </div>
+                <button class="btn btn-warning fw-bold w-100" type="submit"><i class="bi bi-person-plus"></i> Crear usuario y contraseña</button>
+            </form>
+            <div id="credencial"></div>
+        </div>
+        <div class="panel"><h6>Personal</h6><div id="lUsuarios"></div></div>
+    </section>
+
+    <!-- FRAP -->
+    <section data-sec="fraps" hidden>
+        <input type="search" class="form-control mb-3" id="buscarFrap" placeholder="Buscar folio, persona, tipo o unidad">
+        <div class="panel"><h6 id="tituloFraps">FRAP</h6><div id="lFraps"></div></div>
+    </section>
+
+    <!-- GUARDIAS -->
+    <section data-sec="guardias" hidden>
+        <div class="panel"><h6>Horas de guardia por persona</h6><div id="gGuardias"></div></div>
+        <div class="panel"><h6>Detalle</h6><div id="lGuardias"></div></div>
+    </section>
+
+    <!-- TELEGRAM -->
+    <section data-sec="telegram" hidden>
+        <div class="panel">
+            <h6>Comandos en el grupo</h6>
+            <p class="small" id="tgEstado">–</p>
+            <button class="btn btn-warning fw-bold w-100" id="btnActivarTg"><i class="bi bi-telegram"></i> Activar comandos en el grupo vinculado</button>
+            <p class="small text-muted mt-2 mb-0">Usa el bot y el grupo que este teléfono tiene vinculados en Ajustes. Solo ese grupo puede pedir reportes.</p>
+        </div>
+        <div class="panel">
+            <h6>Qué puedes escribir en el grupo</h6>
+            <div class="cmd"><code>/servicios 26/11/26</code><div class="small text-muted">FRAP y salidas de ese día. También un rango: <code>/servicios 01/11/26 15/11/26</code></div></div>
+            <div class="cmd"><code>/servicios tipo 11/26</code><div class="small text-muted">Sumatoria de clínicos, traumáticos, gineco-obstétricos y eventos especiales del mes (o usa <code>/tipos</code>).</div></div>
+            <div class="cmd"><code>/guardias 11/26</code><div class="small text-muted">Horas de guardia por persona.</div></div>
+            <div class="cmd"><code>/resumen mes</code><div class="small text-muted">Reporte completo con gráficas.</div></div>
+            <div class="cmd"><code>/personal</code><div class="small text-muted">Quién está activo, quién está en guardia y lo que lleva este mes.</div></div>
+            <p class="small text-muted mb-0 mt-2">Fechas: dd/mm/aa, mm/aa (mes completo), hoy, ayer, semana o mes.</p>
+        </div>
+    </section>
+</div>
+<div id="estado" class="alert shadow"></div>
+
+<script>
+(function () {
+    const { Perfil, Nube, TG, esc, entregarArchivo } = LocalApp;
+    const $ = (id) => document.getElementById(id);
+    const p = Perfil.get();
+    if (!p || !Perfil.sesionActiva()) { location.replace('login.html'); return; }
+    if (!p.admin) { location.replace('dashboard.html'); return; }
+
+    const COLORES = ['#1a6fb5', '#e04848', '#b65fd0', '#f2dc00', '#8a9bb0', '#2fb37a', '#ff8a3d', '#6c72ff'];
+    const pad = (n) => String(n).padStart(2, '0');
+    const ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    const horas = (m) => Math.floor(m / 60) + 'h ' + pad(m % 60) + 'm';
+    const fecha = (s) => { const m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/.exec(s || ''); return m ? m[3] + '/' + m[2] + '/' + m[1].slice(2) + ' ' + m[4] + ':' + m[5] : (s || ''); };
+    let periodo = rangoDe('mes');
+    let datos = null, usuarios = [];
+
+    function estado(t, tipo, ms) {
+        const e = $('estado'); e.className = 'alert shadow alert-' + (tipo || 'info'); e.textContent = t; e.style.display = 'block';
+        clearTimeout(estado.t); estado.t = setTimeout(() => e.style.display = 'none', ms || 3500);
+    }
+    function errorRed(err) {
+        if (err && err.revocado) { location.replace('login.html'); return; }
+        $('sinRed').style.display = 'block';
+        $('sinRed').textContent = err && err.red ? 'Sin conexión con el servidor de control. El panel necesita internet.' : (err && err.message) || 'Error';
+    }
+    function rangoDe(k) {
+        const h = new Date();
+        if (k === 'hoy') return [ymd(h), ymd(h)];
+        if (k === '7') { const a = new Date(h); a.setDate(a.getDate() - 6); return [ymd(a), ymd(h)]; }
+        if (k === 'pasado') { const a = new Date(h.getFullYear(), h.getMonth() - 1, 1), b = new Date(h.getFullYear(), h.getMonth(), 0); return [ymd(a), ymd(b)]; }
+        return [ymd(new Date(h.getFullYear(), h.getMonth(), 1)), ymd(new Date(h.getFullYear(), h.getMonth() + 1, 0))];
+    }
+
+    // ------------------------------------------------ pestañas
+    document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', x === t ? 'true' : 'false'));
+        document.querySelectorAll('section[data-sec]').forEach(s => s.hidden = s.dataset.sec !== t.dataset.tab);
+        $('bloquePeriodo').style.display = ['resumen', 'fraps', 'guardias'].includes(t.dataset.tab) ? 'block' : 'none';
+        if (t.dataset.tab === 'personal') cargarUsuarios();
+        if (t.dataset.tab === 'telegram') pintarTelegram();
+        window.scrollTo(0, 0);
+    }));
+    document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
+        document.querySelectorAll('.chip').forEach(x => x.setAttribute('aria-pressed', x === c ? 'true' : 'false'));
+        if (c.dataset.p === 'rango') { $('fechas').classList.add('ver'); $('fDesde').value = periodo[0]; $('fHasta').value = periodo[1]; return; }
+        $('fechas').classList.remove('ver');
+        periodo = rangoDe(c.dataset.p); cargar();
+    }));
+    $('btnAplicar').addEventListener('click', () => {
+        if (!$('fDesde').value || !$('fHasta').value) return;
+        periodo = [$('fDesde').value, $('fHasta').value].sort(); cargar();
+    });
+    $('btnRecargar').addEventListener('click', () => { cargar(); if (!document.querySelector('[data-sec=personal]').hidden) cargarUsuarios(); });
+
+    // ------------------------------------------------ gráficas
+    function barras(cont, obj, fmt) {
+        const ent = Object.entries(obj || {}).filter(([k, v]) => v > 0 || k !== 'Otro');
+        const max = Math.max(0, ...ent.map(e => e[1]));
+        const total = ent.reduce((a, e) => a + e[1], 0);
+        if (!ent.length || max <= 0) { cont.innerHTML = '<div class="vacio">Sin datos en este periodo.</div>'; return; }
+        cont.innerHTML = ent.map(([k, v], i) => '<div class="barra"><span class="et" title="' + esc(k) + '">' + esc(k) + '</span>' +
+            '<span class="pista"><span class="rel" style="display:block;width:' + Math.max(v > 0 ? 2 : 0, v * 100 / max) + '%;background:' + COLORES[i % COLORES.length] + '"></span></span>' +
+            '<span class="val">' + (fmt ? fmt(v) : v + (total ? ' <small class="text-muted fw-normal">' + Math.round(v * 100 / total) + '%</small>' : '')) + '</span></div>').join('');
+    }
+    function columnas(cont, porDia, desde, hasta) {
+        const dias = []; const a = new Date(desde + 'T00:00:00'), b = new Date(hasta + 'T00:00:00');
+        for (let d = new Date(a); d <= b && dias.length < 120; d.setDate(d.getDate() + 1)) dias.push(ymd(d));
+        const vals = dias.map(d => porDia[d] || 0), max = Math.max(1, ...vals);
+        if (!vals.some(v => v > 0)) { cont.innerHTML = '<div class="vacio">Sin FRAP en este periodo.</div>'; return; }
+        const W = 600, H = 170, base = 148, top = 14, n = dias.length, paso = W / n, bw = Math.max(2, paso * 0.66);
+        let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="FRAP por día">';
+        s += '<line x1="0" y1="' + base + '" x2="' + W + '" y2="' + base + '" stroke="rgba(255,255,255,.15)"/>';
+        vals.forEach((v, i) => {
+            const h = (base - top) * v / max, x = i * paso + (paso - bw) / 2;
+            if (v > 0) s += '<rect x="' + x.toFixed(1) + '" y="' + (base - h).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="2" fill="#1a6fb5"><title>' + dias[i].split('-').reverse().join('/') + ': ' + v + '</title></rect>';
+            if (v === max && v > 0) s += '<text x="' + (x + bw / 2).toFixed(1) + '" y="' + (base - h - 4).toFixed(1) + '" fill="#f2dc00" font-size="12" text-anchor="middle" font-weight="700">' + v + '</text>';
+            const marca = n <= 10 || i === 0 || i === n - 1 || (i % Math.ceil(n / 6) === 0);
+            if (marca) s += '<text x="' + (i * paso + paso / 2).toFixed(1) + '" y="' + (H - 4) + '" fill="#9fb6cf" font-size="11" text-anchor="middle">' + dias[i].slice(8) + '/' + dias[i].slice(5, 7) + '</text>';
+        });
+        cont.innerHTML = s + '</svg>';
+    }
+
+    // ------------------------------------------------ cargar estadísticas
+    async function cargar() {
+        document.querySelector('.wrap').classList.add('cargando');
+        try {
+            datos = await Nube.llamar('estadisticas', { desde: periodo[0], hasta: periodo[1] });
+            $('sinRed').style.display = 'none';
+            pintar();
+        } catch (err) { errorRed(err); }
+        finally { document.querySelector('.wrap').classList.remove('cargando'); }
+    }
+    function pintar() {
+        const d = datos, t = d.totales;
+        $('tFraps').textContent = t.fraps; $('tSalidas').textContent = t.salidas;
+        $('tHoras').textContent = Math.floor(t.minutos_guardia / 60) + 'h'; $('tPersonal').textContent = t.usuarios_activos;
+        barras($('gTipos'), d.por_categoria);
+        columnas($('gDias'), d.por_dia, d.desde, d.hasta);
+        barras($('gUnidad'), d.por_unidad);
+        barras($('gDictamen'), d.por_dictamen);
+        const per = Object.entries(d.por_persona || {});
+        $('lPersonas').innerHTML = per.length ? per.map(([n, v]) => '<div class="fila"><div><b>' + esc(n) + '</b><div class="sub">' + v.fraps + ' FRAP · ' + v.salidas + ' salidas</div></div><div class="text-end"><b>' + horas(v.minutos) + '</b><div class="sub">de guardia</div></div></div>').join('') : '<div class="vacio">Sin actividad en este periodo.</div>';
+        pintarFraps();
+        // guardias
+        const g = d.guardias || [], gm = {};
+        g.forEach(x => gm[x.nombre] = x.minutos);
+        barras($('gGuardias'), gm, (m) => horas(m));
+        $('lGuardias').innerHTML = g.length ? g.map(x => '<div class="fila"><div><b>' + esc(x.nombre) + '</b> ' + (x.en_guardia ? '<span class="etq guardia">En guardia</span>' : '') + '<div class="sub">' + esc(x.usuario) + ' · ' + x.turnos + ' turno(s)</div></div><div class="text-end"><b>' + horas(x.minutos) + '</b></div></div>').join('') : '<div class="vacio">Sin guardias en este periodo.</div>';
+    }
+    function pintarFraps() {
+        if (!datos) return;
+        const q = $('buscarFrap').value.trim().toLowerCase();
+        const lista = (datos.fraps || []).filter(f => !q || [f.folio, f.jefe, f.capturo, f.categoria, f.dictamen, f.unidad].join(' ').toLowerCase().includes(q));
+        $('tituloFraps').textContent = 'FRAP (' + lista.length + ')';
+        $('lFraps').innerHTML = lista.length ? lista.map(f => '<div class="fila"><div><b>' + esc(f.folio) + '</b><div class="sub">' + esc(fecha(f.fecha)) + ' · ' + esc(f.jefe) + '</div><div class="mt-1"><span class="etq">' + esc(f.categoria) + '</span>' + (f.unidad ? '<span class="etq">' + esc(f.unidad) + '</span>' : '') + (f.triage ? '<span class="etq">' + esc(f.triage) + '</span>' : '') + '</div></div><div class="text-end sub" style="max-width:40%">' + esc(f.dictamen) + '</div></div>').join('') : '<div class="vacio">No hay FRAP que coincidan.</div>';
+    }
+    $('buscarFrap').addEventListener('input', pintarFraps);
+
+    // ------------------------------------------------ PDF
+    document.querySelectorAll('[data-pdf]').forEach(b => b.addEventListener('click', async () => {
+        b.disabled = true;
+        try {
+            const blob = await Nube.llamar('reporte', { tipo: b.dataset.pdf, desde: periodo[0], hasta: periodo[1] }, { binario: true, timeout: 60000 });
+            await entregarArchivo('reporte_' + b.dataset.pdf + '_' + periodo[0] + (periodo[0] !== periodo[1] ? '_al_' + periodo[1] : '') + '.pdf', blob);
+        } catch (err) { estado(err.message || 'No se pudo generar el PDF.', 'danger'); }
+        finally { b.disabled = false; }
+    }));
+
+    // ------------------------------------------------ personal
+    async function cargarUsuarios() {
+        try { usuarios = (await Nube.llamar('usuarios')).usuarios; pintarUsuarios(); $('sinRed').style.display = 'none'; }
+        catch (err) { errorRed(err); }
+    }
+    function pintarUsuarios() {
+        const act = usuarios.filter(u => u.activo), bajas = usuarios.filter(u => !u.activo);
+        const fila = (u) => '<div class="fila" style="display:block"><div class="d-flex justify-content-between gap-2"><div><b>' + esc(u.nombre) + '</b>' +
+            '<div class="sub">Usuario: <code>' + esc(u.usuario) + '</code></div>' +
+            '<div class="mt-1">' + (u.admin ? '<span class="etq admin">Administrador</span>' : '') + '<span class="etq">' + (u.rol === 'operador' ? 'Operador' : 'Paramédico') + '</span>' + (!u.activo ? '<span class="etq baja">Dado de baja</span>' : '') + '</div></div>' +
+            '<div class="text-end sub">' + u.fraps + ' FRAP<br>' + horas(u.minutos) + '<br>' + (u.ultima ? 'Visto ' + new Date(u.ultima * 1000).toLocaleDateString('es-MX') : 'Sin entrar aún') + '</div></div>' +
+            '<div class="acciones">' + (u.activo
+                ? '<button class="btn btn-outline-light" data-acc="clave" data-id="' + u.id + '"><i class="bi bi-key"></i> Nueva contraseña</button>' +
+                  '<button class="btn btn-outline-light" data-acc="editar" data-id="' + u.id + '"><i class="bi bi-pencil"></i> Editar</button>' +
+                  (u.usuario !== p.usuario ? '<button class="btn btn-outline-danger" data-acc="baja" data-id="' + u.id + '"><i class="bi bi-person-x"></i> Dar de baja</button>' : '')
+                : '<button class="btn btn-outline-light" data-acc="alta" data-id="' + u.id + '"><i class="bi bi-person-check"></i> Reactivar</button>') + '</div></div>';
+        $('lUsuarios').innerHTML = (act.length ? act.map(fila).join('') : '<div class="vacio">Aún no hay personal.</div>') +
+            (bajas.length ? '<details class="mt-3"><summary class="small text-muted">Dados de baja (' + bajas.length + ')</summary>' + bajas.map(fila).join('') + '</details>' : '');
+    }
+    function mostrarCredencial(r, titulo) {
+        const texto = 'Hola ' + r.nombre.split(' ')[0] + ', estos son tus datos para entrar a la app STEAP FRAP:\nUsuario: ' + r.usuario + '\nContraseña: ' + r.clave + '\n\nLa primera vez necesitas internet.';
+        $('credencial').innerHTML = '<div class="credencial"><div class="fw-bold mb-2">' + esc(titulo) + ': ' + esc(r.nombre) + '</div>' +
+            '<div class="mb-1">Usuario: <code>' + esc(r.usuario) + '</code></div><div class="mb-2">Contraseña: <code>' + esc(r.clave) + '</code></div>' +
+            '<p class="small text-muted mb-2">Compártela ahora: por seguridad no se vuelve a mostrar.</p>' +
+            '<button class="btn btn-warning btn-sm fw-bold" id="btnCompartirCred"><i class="bi bi-share"></i> Compartir</button></div>';
+        $('btnCompartirCred').addEventListener('click', async () => {
+            const P = window.Capacitor && window.Capacitor.Plugins;
+            try {
+                if (P && P.Share) await P.Share.share({ title: 'Acceso STEAP FRAP', text: texto, dialogTitle: 'Enviar acceso' });
+                else if (navigator.share) await navigator.share({ title: 'Acceso STEAP FRAP', text: texto });
+                else { await navigator.clipboard.writeText(texto); estado('Copiado. Pégalo en WhatsApp.', 'success'); }
+            } catch (e) { try { await navigator.clipboard.writeText(texto); estado('Copiado. Pégalo en WhatsApp.', 'success'); } catch (e2) {} }
+        });
+        document.querySelector('[data-sec=personal]').scrollIntoView({ behavior: 'smooth' });
+    }
+    $('formNuevo').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const nombre = $('nNombre').value.trim().replace(/\s+/g, ' ');
+        if (nombre.split(' ').length < 2) { estado('Escribe el nombre completo.', 'warning'); return; }
+        try {
+            const r = await Nube.llamar('usuario_crear', { nombre, rol: $('nRol').value, admin: $('nAdmin').checked });
+            mostrarCredencial(r, 'Usuario creado'); $('formNuevo').reset(); cargarUsuarios();
+        } catch (err) { estado(err.message, 'danger'); }
+    });
+    $('lUsuarios').addEventListener('click', async (e) => {
+        const b = e.target.closest('[data-acc]'); if (!b) return;
+        const u = usuarios.find(x => x.id === Number(b.dataset.id)); if (!u) return;
+        try {
+            if (b.dataset.acc === 'clave') {
+                if (!confirm('¿Generar una contraseña nueva para ' + u.nombre + '? La anterior dejará de servir y se cerrará su sesión.')) return;
+                mostrarCredencial(await Nube.llamar('usuario_clave', { id: u.id }), 'Nueva contraseña');
+            } else if (b.dataset.acc === 'baja') {
+                if (!confirm('¿Dar de baja a ' + u.nombre + '? Ya no podrá entrar a la app. Sus FRAP y horas se quedan en los reportes.')) return;
+                await Nube.llamar('usuario_baja', { id: u.id }); estado(u.nombre + ' fue dado de baja.', 'success');
+            } else if (b.dataset.acc === 'alta') {
+                await Nube.llamar('usuario_alta', { id: u.id }); estado(u.nombre + ' está activo de nuevo. Dale una contraseña nueva si no la recuerda.', 'success');
+            } else if (b.dataset.acc === 'editar') {
+                const nombre = prompt('Nombre completo:', u.nombre); if (nombre === null) return;
+                const admin = u.usuario === p.usuario ? true : confirm('¿' + nombre + ' es administrador? (Aceptar = sí, Cancelar = no)');
+                await Nube.llamar('usuario_editar', { id: u.id, nombre: nombre, rol: u.rol, admin: admin }); estado('Datos guardados.', 'success');
+            }
+            cargarUsuarios();
+        } catch (err) { estado(err.message, 'danger'); }
+    });
+
+    // ------------------------------------------------ telegram
+    function pintarTelegram() {
+        const tg = datos && datos.telegram, c = TG.cfg();
+        $('tgEstado').innerHTML = tg && tg.activo ? '<span class="etq guardia">Activos</span> Los comandos funcionan en el grupo ' + esc(tg.chat) + '.' : '<span class="etq baja">Sin activar</span> Actívalos una vez para pedir reportes desde el grupo.';
+        $('btnActivarTg').disabled = !c;
+        if (!c) $('tgEstado').innerHTML += '<br><span class="text-warning">Primero vincula Telegram en Ajustes.</span>';
+    }
+    $('btnActivarTg').addEventListener('click', async () => {
+        const c = TG.cfg(); if (!c) return;
+        $('btnActivarTg').disabled = true;
+        try {
+            await Nube.llamar('telegram_activar', { bot_token: c.token, chat_id: c.chat });
+            estado('Listo. Escribe /ayuda en el grupo.', 'success', 5000);
+            if (datos) datos.telegram = { activo: true, chat: c.chat };
+            pintarTelegram();
+        } catch (err) { estado(err.message, 'danger', 6000); }
+        finally { $('btnActivarTg').disabled = false; }
+    });
+
+    cargar();
+})();
+</script>
+</body>
+</html>

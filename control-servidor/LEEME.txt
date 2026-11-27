@@ -1,0 +1,21 @@
+CONTROL STEAP — servidor de usuarios, reportes y comandos de Telegram
+=====================================================================
+DÓNDE: sube la carpeta "control" completa a  public_html/steap/control
+       (queda en https://steap.services80.xyz/control/ ). Requiere PHP 8 o mayor.
+
+1. Extrae el zip y sube la carpeta control (con sus archivos ocultos .htaccess).
+2. Abre https://steap.services80.xyz/control/  -> debe decir "Servicio de control STEAP en línea".
+3. En la app nueva, entra con el administrador:
+      usuario:    $anleo_admin01
+      contraseña: la que diste
+   Verás el botón amarillo CONTROL arriba.
+4. En CONTROL > Personal crea a cada persona con su nombre completo. La app genera
+   su usuario y contraseña; compártelos con el botón Compartir (no se vuelven a mostrar;
+   si alguien la olvida usa "Nueva contraseña").
+5. En CONTROL > Telegram pulsa "Activar comandos en el grupo vinculado" (una sola vez).
+   Luego escribe /ayuda en el grupo.
+
+La carpeta "datos" se crea sola y guarda la base de datos (protegida). No la borres:
+ahí está todo el historial del control. Respáldala de vez en cuando.
+En el servidor solo se guarda el RESUMEN (folio, fecha, quién, tipo, dictamen, unidad,
+triage, horas). Los datos del paciente solo van en el PDF de cada FRAP en Telegram.

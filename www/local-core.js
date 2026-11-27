@@ -77,19 +77,19 @@
         },
         // Crea o actualiza el perfil. La "clave" (p. ej. OCV-A7) identifica este
         // teléfono en los folios y NO cambia aunque edites tu nombre.
-        guardar(nombre, rol) {
+        guardar(nombre, rol, extra) {
             const previo = this.get();
-            const perfil = {
+            const perfil = Object.assign({
                 nombre: String(nombre).trim().replace(/\s+/g, ' '),
                 rol: rol === 'operador' ? 'operador' : 'paramedico',
                 clave: previo && previo.clave ? previo.clave : iniciales(nombre) + '-' + sufijoAzar(),
                 creado: previo && previo.creado ? previo.creado : fechaLocalStr()
-            };
+            }, extra || {});
             localStorage.setItem('perfil', JSON.stringify(perfil));
             return perfil;
         },
         hayPerfil() { return !!this.get(); },
-        sesionActiva() { return localStorage.getItem('sesion') === '1' && !!this.get(); },
+        sesionActiva() { const p = this.get(); return localStorage.getItem('sesion') === '1' && !!p && !!p.token; },
         iniciarSesion() { localStorage.setItem('sesion', '1'); },
         cerrarSesion() {
             localStorage.removeItem('sesion');
@@ -340,15 +340,17 @@
                     '\n✅ Realizadas: ' + mes.h + 'h ' + mes.m + 'm\n🎯 Faltan: ' + faltan + 'h para la meta de ' + META_HORAS_MES + 'h.'
             });
             Outbox.enviarPendientes();
+            Nube.sincronizar();
             return jsonResp({ status: 'success', msg: 'Turno finalizado. Llevas ' + mes.h + 'h este mes.' + avisoSinTelegram() });
         }
 
-        await DB.add('guardias', { paramedico: p.nombre, base, fecha_entrada: fechaLocalStr(ahora), fecha_salida: null, minutos_trabajados: 0 });
+        await DB.add('guardias', { paramedico: p.nombre, usuario: p.usuario || null, base, fecha_entrada: fechaLocalStr(ahora), fecha_salida: null, minutos_trabajados: 0 });
         await Outbox.agregar({
             tipo: 'msg',
             html: '🟢 ' + b('INICIO DE GUARDIA') + '\n🚑 ' + b('Voluntario:') + ' ' + esc(p.nombre) + '\n🏥 ' + b('Base:') + ' ' + esc(base) + '\n🕒 ' + b('Entrada:') + ' ' + hora
         });
         Outbox.enviarPendientes();
+        Nube.sincronizar();
         return jsonResp({ status: 'success', msg: 'Guardia iniciada en ' + base + avisoSinTelegram() });
     }
 
@@ -372,7 +374,7 @@
                 combustible_salida: d.combustible_salida || '', ubicacion_servicio: d.ubicacion_servicio || '',
                 fecha_salida: fechaLocalStr(), km_llegada: null, combustible_llegada: null, hospital_traslado: null,
                 fecha_llegada: null, estado: 'activo', id_usuario: p.clave, local_ref: d.local_servicio_ref || null,
-                rastreo_token: rt ? rt.token : null
+                rastreo_token: rt ? rt.token : null, usuario: p.usuario || null
             };
             const id = await DB.add('servicios', reg);
             reservarFolio(folio);
@@ -386,6 +388,7 @@
             });
             if (rt) Rastreo.arrancar(rt.token, { folio: folio, unidad: d.unidad, tipo: d.tipo_servicio });
             Outbox.enviarPendientes();
+            Nube.sincronizar();
             return jsonResp({ success: true, servicio: { id, folio_servicio: folio } });
         }
 
@@ -412,6 +415,7 @@
                     '\nHospital de traslado: ' + (d.hospital_traslado ? esc(d.hospital_traslado) : 'No aplicó')
             });
             Outbox.enviarPendientes();
+            Nube.sincronizar();
             return jsonResp({ success: true });
         }
         return jsonResp({ success: false, error: 'Acción no reconocida.' }, 400);
@@ -472,6 +476,7 @@
         if (d.foto_kilometraje) await Outbox.agregar({ tipo: 'foto', blob: dataUrlABlob(d.foto_kilometraje), caption: 'Foto kilometraje - ' + folio });
         if (d.video_ambulancia) await Outbox.agregar({ tipo: 'video', blob: dataUrlABlob(d.video_ambulancia), caption: 'Video ambulancia - ' + folio });
         Outbox.enviarPendientes();
+        Nube.sincronizar();
         return jsonResp({ success: true, folio });
     }
 
@@ -510,7 +515,9 @@
             await DB.put('fraps', {
                 folio, fecha: fechaLocalStr(ahora), paramedico: p.nombre, paciente: d.nombre_paciente || 'No identificado',
                 edad: d.edad || '', genero: d.genero || '', tipo_servicio: d.tipo_servicio || '', resolucion: d.resolucion_final || '',
-                hospital: d.resolucion_final === 'Traslado a Domicilio' ? ('Domicilio: ' + (d.domicilio_destino || '')) : (d.hospital_receptor || ''), pdf, enviado: false
+                hospital: d.resolucion_final === 'Traslado a Domicilio' ? ('Domicilio: ' + (d.domicilio_destino || '')) : (d.hospital_receptor || ''), pdf, enviado: false,
+                unidad: d.vehiculo_traslado || '', triage: d.triage_final || '', jefe: (d.jefe_manual || '').trim() || p.nombre,
+                usuario: p.usuario || null
             });
             reservarFolio(folio);
             await Outbox.agregar({
@@ -572,11 +579,115 @@
         return fetchReal(input, init);
     };
 
+
+    // ------------------------------------------------------------ Control (servidor STEAP)
+    // Usuarios con contraseña, y un RESUMEN de cada FRAP / salida / guardia que se
+    // sube al servidor para el panel del administrador. Los datos del paciente
+    // NUNCA salen del teléfono (solo viajan dentro del PDF a Telegram).
+    const Nube = (() => {
+        const URL_DEF = 'https://steap.services80.xyz/control/api.php';
+        const url = () => { try { return localStorage.getItem('control_url') || URL_DEF; } catch (e) { return URL_DEF; } };
+        function revocar() {
+            const p = Perfil.get();
+            if (p) { delete p.token; p.admin = false; localStorage.setItem('perfil', JSON.stringify(p)); }
+            Perfil.cerrarSesion();
+            localStorage.setItem('sesion_revocada', '1');
+        }
+        async function llamar(accion, datos, opciones) {
+            const p = Perfil.get();
+            const cuerpo = Object.assign({ accion: accion, token: p && p.token }, datos || {});
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), (opciones && opciones.timeout) || 30000);
+            let r;
+            try {
+                r = await fetchReal(url(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cuerpo), signal: ctrl.signal });
+            } catch (e) {
+                const err = new Error('Sin conexión con el servidor de control.'); err.red = true; throw err;
+            } finally { clearTimeout(timer); }
+            if (opciones && opciones.binario && r.ok) return await r.blob();
+            let j = null;
+            try { j = await r.json(); } catch (e) { j = { ok: false, error: 'El servidor de control respondió algo inesperado (' + r.status + ').' }; }
+            if (r.status === 401 && j.revocado) revocar();
+            if (!j.ok) { const err = new Error(j.error || 'Error del servidor.'); err.codigo = r.status; err.revocado = !!j.revocado; throw err; }
+            return j;
+        }
+        async function login(usuario, clave) {
+            const j = await llamar('login', { usuario: usuario, clave: clave, equipo: (navigator.userAgent || '').slice(0, 80) });
+            const pf = j.perfil;
+            localStorage.removeItem('sesion_revocada');
+            return Perfil.guardar(pf.nombre, pf.rol, { usuario: pf.usuario, token: j.token, admin: !!pf.admin, id_servidor: pf.id });
+        }
+        let enCurso = null;
+        function sincronizar() {
+            const p = Perfil.get();
+            if (!p || !p.token || (typeof navigator !== 'undefined' && navigator.onLine === false)) return Promise.resolve(null);
+            if (enCurso) return enCurso;
+            enCurso = (async () => {
+                // Solo lo de este usuario (si el teléfono lo comparten varias personas)
+                const mio = (x) => x.usuario ? x.usuario === p.usuario : x.paramedico === p.nombre;
+                const fraps = (await DB.all('fraps')).filter(mio).map(f => ({
+                    folio: f.folio, fecha: f.fecha, tipo: f.tipo_servicio || '', dictamen: f.resolucion || '', hospital: f.hospital || '',
+                    unidad: f.unidad || '', triage: f.triage || '', jefe: f.jefe || f.paramedico || ''
+                }));
+                const guardias = (await DB.all('guardias')).filter(mio).map(g => ({ entrada: g.fecha_entrada, salida: g.fecha_salida, base: g.base || '' }));
+                const servicios = (await DB.all('servicios')).filter(s => s.usuario ? s.usuario === p.usuario : s.id_usuario === p.clave).map(s => ({
+                    folio: s.folio_servicio, salida: s.fecha_salida, llegada: s.fecha_llegada, unidad: s.unidad || '', tipo: s.tipo_servicio || '',
+                    estado: s.estado || '', hospital: s.hospital_traslado || '', jefe: s.jefe_servicio || ''
+                }));
+                const j = await llamar('sync', { fraps: fraps, guardias: guardias, servicios: servicios });
+                const act = Perfil.get();
+                if (act && j.perfil) { act.admin = !!j.perfil.admin; act.rol = j.perfil.rol || act.rol; localStorage.setItem('perfil', JSON.stringify(act)); }
+                localStorage.setItem('ultima_sync', String(Date.now()));
+                return j;
+            })().catch(e => (e && e.revocado) ? { revocado: true } : null).finally(() => { enCurso = null; });
+            return enCurso;
+        }
+        if (typeof window !== 'undefined') window.addEventListener('online', () => sincronizar());
+        return { url, llamar, login, sincronizar, revocar, conectado: () => !!((Perfil.get() || {}).token), esAdmin: () => !!((Perfil.get() || {}).admin) };
+    })();
+
+    // Importa un respaldo exportado desde Ajustes, sin duplicar lo que ya existe.
+    async function importarRespaldo(datos) {
+        if (!datos || typeof datos !== 'object' || !('fraps' in datos || 'guardias' in datos)) throw new Error('El archivo no es un respaldo de FRAP.');
+        const n = { fraps: 0, guardias: 0, servicios: 0, checklists: 0 };
+        const folios = new Set((await DB.all('fraps')).map(f => f.folio));
+        for (const f of (datos.fraps || [])) {
+            if (!f || !f.folio || folios.has(f.folio)) continue;
+            const c = Object.assign({}, f, { importado: true }); delete c.pdf_b64;
+            c.pdf = f.pdf_b64 ? dataUrlABlob('data:application/pdf;base64,' + f.pdf_b64) : null;
+            await DB.put('fraps', c); n.fraps++;
+        }
+        const claveG = (g) => (g.paramedico || '') + '|' + g.fecha_entrada;
+        const vistos = new Set((await DB.all('guardias')).map(claveG));
+        for (const g of (datos.guardias || [])) { if (g && g.fecha_entrada && !vistos.has(claveG(g))) { const c = Object.assign({}, g); delete c.id; await DB.add('guardias', c); n.guardias++; } }
+        const fs = new Set((await DB.all('servicios')).map(s => s.folio_servicio));
+        for (const s of (datos.servicios || [])) { if (s && s.folio_servicio && !fs.has(s.folio_servicio)) { const c = Object.assign({}, s); delete c.id; await DB.add('servicios', c); n.servicios++; } }
+        const fc = new Set((await DB.all('checklists')).map(c => c.folio_checklist));
+        for (const c0 of (datos.checklists || [])) { if (c0 && c0.folio_checklist && !fc.has(c0.folio_checklist)) { const c = Object.assign({}, c0); delete c.id; await DB.add('checklists', c); n.checklists++; } }
+        // que los folios nuevos no repitan los importados
+        const reservarSiMayor = (folio) => {
+            const m = /^(.*-)(\d{4})$/.exec(folio || '');
+            if (!m) return;
+            const prev = parseInt(localStorage.getItem('cont_' + m[1]) || '0', 10) || 0;
+            if (parseInt(m[2], 10) > prev) localStorage.setItem('cont_' + m[1], String(parseInt(m[2], 10)));
+        };
+        (datos.fraps || []).forEach(f => f && reservarSiMayor(f.folio));
+        (datos.servicios || []).forEach(s => s && reservarSiMayor(s.folio_servicio));
+        (datos.checklists || []).forEach(c => c && reservarSiMayor(c.folio_checklist));
+        Nube.sincronizar();
+        return n;
+    }
+
     // ------------------------------------------------- utilidades para pantallas
     async function exportarRespaldo() {
         const salida = { exportado: fechaLocalStr(), perfil: Perfil.get() };
         for (const n of ['guardias', 'servicios', 'checklists']) salida[n] = await DB.all(n);
-        salida.fraps = (await DB.all('fraps')).map(f => { const c = Object.assign({}, f); delete c.pdf; return c; });
+        salida.fraps = [];
+        for (const f of await DB.all('fraps')) {
+            const c = Object.assign({}, f); delete c.pdf;
+            if (f.pdf instanceof Blob) { try { c.pdf_b64 = await blobABase64(f.pdf); } catch (e) {} }
+            salida.fraps.push(c);
+        }
         return salida;
     }
 
@@ -606,5 +717,5 @@
         return 'descargado';
     }
 
-    window.LocalApp = { Perfil, DB, TG, TgError, Outbox, esc, fechaLocalStr, parseLocal, horasMin, exportarRespaldo, entregarArchivo, META_HORAS_MES };
+    window.LocalApp = { Perfil, DB, TG, TgError, Outbox, esc, fechaLocalStr, parseLocal, horasMin, exportarRespaldo, importarRespaldo, Nube, entregarArchivo, META_HORAS_MES };
 })();

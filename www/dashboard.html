@@ -39,6 +39,8 @@
         .icon-box { font-size: 3rem; margin-bottom: 8px; }
         #reader { width: 100%; max-width: 400px; margin: 0 auto; border-radius: 12px; overflow: hidden; border: none !important; }
         #reader video { border-radius: 12px; object-fit: cover; }
+        .btn-control { background: #f2dc00; color: #0b1d33; border-radius: 10px; padding: 4px 10px; font-family: var(--titulo, sans-serif); letter-spacing: .03em; text-transform: uppercase; }
+        .btn-control:active { transform: scale(.96); }
         .alerta-guardia { border-left: 6px solid #ff9800; border-radius: 12px; }
     </style>
     <script src="offline-sync.js"></script>
@@ -53,6 +55,7 @@
         <div class="container d-flex justify-content-between">
             <span class="navbar-brand mb-0 h1 fw-bold"><img src="steap-logo.png" alt="STEAP" style="height:30px;width:auto;vertical-align:middle;margin-right:8px;"> FRAP</span>
             <div class="d-flex align-items-center gap-3">
+                <a href="control.html" id="btnControl" class="btn btn-sm fw-bold btn-control" style="display:none;"><i class="bi bi-speedometer2"></i> Control</a>
                 <a href="ajustes.html" class="text-white text-decoration-none position-relative" aria-label="Ajustes">
                     <i class="bi bi-gear-fill fs-4"></i>
                     <span id="badgePend" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark" style="display:none;">0</span>
@@ -217,6 +220,17 @@
                 }
             }
         }
+
+        // Control (administrador) y envío del resumen al servidor
+        (function () {
+            const { Perfil, Nube } = LocalApp;
+            const mostrarControl = () => { const p = Perfil.get(); document.getElementById('btnControl').style.display = (p && p.admin) ? 'inline-block' : 'none'; };
+            mostrarControl();
+            Nube.sincronizar().then((r) => {
+                if (r && r.revocado) { window.location.href = 'login.html'; return; }
+                mostrarControl();
+            });
+        })();
 
         document.getElementById('btnLogout').addEventListener('click', async (e) => {
             e.preventDefault();

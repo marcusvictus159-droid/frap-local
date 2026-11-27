@@ -6,3 +6,5 @@ respaldo/
 *.keystore
 *.sql
 .env
+control-servidor/config.php
+control-servidor/datos/
