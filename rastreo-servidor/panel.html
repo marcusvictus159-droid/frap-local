@@ -49,7 +49,7 @@
     var h = '<div class="tarj' + (sel === s.token ? ' sel' : '') + '" data-t="' + s.token + '"><div class="fila" style="justify-content:space-between"><span class="u">' + esc(s.unidad || 'Unidad') + '</span><span class="chip ' + s.estado + '">' + TXT[s.estado] + '</span></div>' +
       '<small>' + esc(s.tipo || '') + (s.tipo ? ' · ' : '') + 'Salió ' + fecha(s.inicio) + (s.fin ? ' · Fin ' + hora(s.fin) : '') + '</small>';
     if (activa) h += '<div style="margin-top:6px;font-size:.88rem">' + (s.recibido ? 'Señal hace <b class="hace" data-r="' + s.recibido + '"></b>' : 'Sin ubicación todavía') + (s.vel != null ? ' · <b>' + Math.round(s.vel * 3.6) + ' km/h</b>' : '') + '</div>';
-    h += '<div class="enlace"><button class="btn sec" data-copiar="' + s.token + '">Copiar enlace</button>' + (s.lat != null ? '<button class="btn sec" data-ir="' + s.token + '">Ver</button>' : '') + '</div></div>';
+    h += '<div class="enlace"><button class="btn sec" data-copiar="' + s.token + '">Copiar enlace</button>' + (s.lat != null ? '<button class="btn sec" data-ir="' + s.token + '">Ver</button>' : '') + (activa ? '<button class="btn sec" data-fin="' + s.token + '" data-un="' + esc(s.unidad || '') + '" style="color:#ff8a8a">Finalizar</button>' : '') + '</div></div>';
     return h;
   }
   function limpiarHist() { if (hist) { mapa.removeLayer(hist); hist = null; } }
@@ -97,6 +97,8 @@
   }
   function mostrarLogin() { $('login').style.display = 'block'; $('app').style.display = 'none'; $('salir').hidden = true; if (timer) { clearInterval(timer); timer = null; } }
   $('lado').addEventListener('click', function (e) {
+    var fz = e.target.closest('[data-fin]');
+    if (fz) { e.stopPropagation(); if (!confirm('¿Finalizar el servicio de ' + (fz.dataset.un || 'esta unidad') + '? Úsalo si la unidad ya regresó y su teléfono no pudo cerrarlo.')) return; api('finalizar', { t: fz.dataset.fin }).then(function (d) { if (!d.ok) alert(d.error || 'No se pudo finalizar'); cargar(); }); return; }
     var c = e.target.closest('[data-copiar]'), i = e.target.closest('[data-ir]'), tj = e.target.closest('.tarj');
     if (c) { e.stopPropagation(); var u = enlaceVer(c.dataset.copiar); (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(function () { c.textContent = '¡Copiado!'; }).catch(function () { prompt('Copia el enlace:', u); }); return; }
     if (i) { e.stopPropagation(); elegir(i.dataset.ir); return; }

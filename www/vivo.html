@@ -148,7 +148,8 @@
             return '<button type="button" class="unidad' + (seleccion === s.token ? ' sel' : '') + '" data-t="' + esc(s.token) + '">' +
                 '<span class="num">' + esc(s.unidad || '—') + '</span>' +
                 '<span class="det"><b>' + esc(s.tipo || 'Servicio') + '</b><span>' + esc(s.folio || '') + '</span><span>' + hace(seg) + vel + '</span></span>' +
-                '<span class="estado ' + s.estado + '">' + (TXT[s.estado] || s.estado) + '</span></button>';
+                '<span class="estado ' + s.estado + '">' + (TXT[s.estado] || s.estado) + '</span></button>' +
+                (seleccion === s.token ? '<button type="button" class="btn btn-outline-danger btn-sm w-100 mb-2" data-fin="' + esc(s.token) + '" data-un="' + esc(s.unidad || '') + '"><i class="bi bi-flag-fill"></i> Finalizar servicio de ' + esc(s.unidad || 'esta unidad') + '</button>' : '');
         }).join('') : '<div class="vacio"><i class="bi bi-check2-circle"></i> Ninguna unidad en servicio por ahora.<br><small>Aparecen aquí en cuanto registran una salida a servicio.</small></div>';
         document.documentElement.style.setProperty('--hoja', document.querySelector('.hoja').offsetHeight + 'px');
         if (primerAjuste && Object.values(capas).some(c => c.punto)) { ajustarTodo(); primerAjuste = false; }
@@ -159,7 +160,24 @@
         if (c && c.punto) mapa.setView(c.punto.getLatLng(), Math.max(mapa.getZoom(), 16), { animate: true });
         if (ultimo) pintar(ultimo);
     }
-    $('lista').addEventListener('click', (e) => { const b = e.target.closest('[data-t]'); if (b) enfocar(b.dataset.t); });
+    $('lista').addEventListener('click', async (e) => {
+        const f = e.target.closest('[data-fin]');
+        if (f) {
+            if (!confirm('¿Finalizar el servicio de ' + (f.dataset.un || 'esta unidad') + '? Úsalo cuando la unidad ya regresó pero su teléfono no pudo cerrar el servicio.')) return;
+            f.disabled = true;
+            try {
+                const r = await fetch(acceso.url + '/api.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accion: 'finalizar', t: f.dataset.fin, clave_panel: acceso.clave }) });
+                const d = await r.json();
+                if (!d.ok) throw new Error(d.error || 'No se pudo finalizar.');
+                seleccion = null; consultar();
+            } catch (err) {
+                alert(/acci[oó]n no reconocida/i.test(err.message) ? 'Primero reemplaza el api.php de la carpeta rastreo en tu hosting.' : err.message);
+                f.disabled = false;
+            }
+            return;
+        }
+        const b = e.target.closest('[data-t]'); if (b) enfocar(b.dataset.t);
+    });
     $('btnCentrar').addEventListener('click', () => { seleccion = null; ajustarTodo(); if (ultimo) pintar(ultimo); });
 
     // ------------------------------------------------ datos

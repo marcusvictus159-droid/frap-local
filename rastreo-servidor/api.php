@@ -156,6 +156,13 @@ try {
             responder(['ok' => true]);
         }
 
+        case 'finalizar': { // el administrador cierra una unidad que se quedó abierta (teléfono apagado, app reinstalada...)
+            if (!panel_ok()) falla(isset($in['clave_panel']) ? 'Contraseña del panel incorrecta.' : 'Sesión no iniciada.', 401);
+            if (!token_ok($in['t'] ?? null)) falla('Token no válido.');
+            db()->prepare('UPDATE servicios SET estado="finalizado", fin=? WHERE token=? AND estado="activo"')->execute([$ahora, $in['t']]);
+            responder(['ok' => true]);
+        }
+
         case 'estado': { // público: quien tiene el enlace ve esta unidad (el token es largo y no adivinable)
             $t = $_GET['t'] ?? '';
             if (!token_ok($t)) falla('Enlace no válido.', 404);
