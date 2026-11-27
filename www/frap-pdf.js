@@ -252,7 +252,8 @@
         const unir = (partes) => partes.filter(x => x && String(x).trim() !== '').join(' | ');
 
         const folio = g('folio', 'SIN_FOLIO');
-        const paramedico = perfil.nombre || 'Desconocido';
+        const esDom = g('resolucion_final') === 'Traslado a Domicilio';
+        const paramedico = V(g('jefe_manual')).trim() || perfil.nombre || 'Desconocido';
 
         // --- evaluación A-B-C (mismas reglas que procesar.php) ---
         const evalViaAerea = (g('form_via_aerea') + (g('form_deglucion') ? ' | Deglución: ' + g('form_deglucion') : '')).trim();
@@ -415,7 +416,7 @@
             ...(ne('insumos_utilizados') ? [[l('Insumos'), v(V(g('insumos_utilizados')), { span: 3 })]] : []),
             [l('Narrativa / Obs.'), v(V(g('observaciones')), { span: 3 })],
             [l('Dictamen'), v(B(g('resolucion_final')) + ' | Triage: ' + V(g('triage_final')) + ' | Vehículo: ' + V(g('vehiculo_traslado')), { span: 3, size: 8.6 })],
-            [l('Hospital rec.'), v(V(g('hospital_receptor', 'No ameritó traslado'))), l('Médico recibe'), v(V(g('medico_recibe')))]
+            esDom ? [l('Domicilio dest.'), v(V(g('domicilio_destino', 'No especificado'))), l('Recibe'), v(V(g('medico_recibe')))] : [l('Hospital rec.'), v(V(g('hospital_receptor', 'No ameritó traslado'))), l('Médico recibe'), v(V(g('medico_recibe')))]
         ]);
 
         // RCP
@@ -442,7 +443,7 @@
         // Firmas
         const nombrePac = V(g('nombre_firma_paciente')).trim() !== '' ? V(g('nombre_firma_paciente')) : 'Paciente / Familiar / Testigo';
         const cajas = [
-            { img: imgMedico, t1: 'MÉDICO RECEPTOR', t2: V(g('medico_recibe')) },
+            { img: imgMedico, t1: esDom ? 'PERSONA QUE RECIBE' : 'MÉDICO RECEPTOR', t2: V(g('medico_recibe')) },
             { img: imgPaciente, t1: nombrePac.toUpperCase(), t2: 'Paciente / Familiar' },
             { img: imgParamedico, t1: 'JEFE DE SERVICIO', t2: V(paramedico).toUpperCase() }
         ];

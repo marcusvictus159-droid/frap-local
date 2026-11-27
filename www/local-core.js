@@ -510,14 +510,14 @@
             await DB.put('fraps', {
                 folio, fecha: fechaLocalStr(ahora), paramedico: p.nombre, paciente: d.nombre_paciente || 'No identificado',
                 edad: d.edad || '', genero: d.genero || '', tipo_servicio: d.tipo_servicio || '', resolucion: d.resolucion_final || '',
-                hospital: d.hospital_receptor || '', pdf, enviado: false
+                hospital: d.resolucion_final === 'Traslado a Domicilio' ? ('Domicilio: ' + (d.domicilio_destino || '')) : (d.hospital_receptor || ''), pdf, enviado: false
             });
             reservarFolio(folio);
             await Outbox.agregar({
                 tipo: 'doc', blob: pdf, nombre: folio + '.pdf', frap: folio,
-                caption: '🚨 ' + b('FRAP REGISTRADA') + ' 🚨\n\n📄 ' + b('Folio:') + ' ' + esc(folio) + '\n🚑 ' + b('Jefe de Servicio:') + ' ' + esc(p.nombre) +
+                caption: '🚨 ' + b('FRAP REGISTRADA') + ' 🚨\n\n📄 ' + b('Folio:') + ' ' + esc(folio) + '\n🚑 ' + b('Jefe de Servicio:') + ' ' + esc((d.jefe_manual || '').trim() || p.nombre) +
                     '\n👤 ' + b('Paciente:') + ' ' + esc(d.nombre_paciente || 'No identificado') + '\n⚖️ ' + b('Dictamen:') + ' ' + esc(d.resolucion_final || '') +
-                    (d.eval_pupilas ? '\n👁 ' + b('Pupilas:') + ' ' + esc(d.eval_pupilas) : '') +
+                    (d.resolucion_final === 'Traslado a Domicilio' && d.domicilio_destino ? '\n🏠 ' + b('Destino:') + ' ' + esc(d.domicilio_destino) : '') + (d.eval_pupilas ? '\n👁 ' + b('Pupilas:') + ' ' + esc(d.eval_pupilas) : '') +
                     (d.servicio_lat && d.servicio_lng ? '\n📍 ' + b('Ubicación:') + ' ' + esc(d.servicio_lat + ', ' + d.servicio_lng) + (d.servicio_precision ? ' (±' + esc(d.servicio_precision) + ' m)' : '') +
                         '\nhttps://www.google.com/maps?q=' + encodeURIComponent(d.servicio_lat + ',' + d.servicio_lng) : '')
             });

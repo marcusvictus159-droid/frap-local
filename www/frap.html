@@ -106,7 +106,11 @@
 
                 <div class="mb-3">
                     <label class="form-label fw-bold">Tripulación</label>
-                    <input type="text" class="form-control input-readonly form-control-sm mb-2" value="Jefe: Cargando..." id="campoJefe" readonly>
+                    <div class="input-group input-group-sm mb-2">
+                        <input type="text" class="form-control input-readonly" value="Jefe: Cargando..." id="campoJefe" readonly>
+                        <button type="button" class="btn btn-outline-secondary" id="btnJefeManual" onclick="alternarJefeManual()"><i class="bi bi-pencil"></i> Poner manualmente</button>
+                    </div>
+                    <input type="text" class="form-control form-control-sm mb-2" name="jefe_manual" id="jefeManual" placeholder="Nombre del Jefe de Servicio" style="display:none">
                     <div class="row g-2">
                         <div class="col-6"><input type="text" class="form-control form-control-sm" name="tripulacion_operador" placeholder="Operador"></div>
                         <div class="col-6"><input type="text" class="form-control form-control-sm" name="tripulacion_auxiliares" placeholder="Auxiliar(es)"></div>
@@ -917,8 +921,9 @@
                 <h6 class="fw-bold text-cruz">Dictamen y Resolución Final</h6>
                 <div class="row g-2 mb-3">
                     <div class="col-12">
-                        <select class="form-select" name="resolucion_final">
+                        <select class="form-select" name="resolucion_final" id="resolucionFinal" onchange="actualizarDestinoTraslado()">
                             <option value="Traslado a Hospital">Traslado a Hospital</option>
+                            <option value="Traslado a Domicilio">Traslado a Domicilio</option>
                             <option value="No Amerita Traslado">No Amerita Traslado (Se queda en el lugar)</option>
                             <option value="Se Niega a Atención/Traslado">Se Niega a Atención / Traslado</option>
                             <option value="Cadáver en el Lugar">Cadáver en el Lugar</option>
@@ -943,8 +948,9 @@
                     </div>
                 </div>
 
-                <div class="mb-3"><label class="form-label fw-bold">Hospital Receptor (Si aplica)</label><input type="text" class="form-control" name="hospital_receptor"></div>
-                <div class="mb-3"><label class="form-label fw-bold">Médico que Recibe</label><input type="text" class="form-control" name="medico_recibe"></div>
+                <div class="mb-3" id="bloqueHospital"><label class="form-label fw-bold">Hospital Receptor (Si aplica)</label><input type="text" class="form-control" name="hospital_receptor"></div>
+                <div class="mb-3" id="bloqueDomicilio" style="display:none"><label class="form-label fw-bold">Domicilio de destino</label><input type="text" class="form-control" name="domicilio_destino" placeholder="Calle, número, colonia, municipio"></div>
+                <div class="mb-3"><label class="form-label fw-bold" id="lblQuienRecibe">Médico que Recibe</label><input type="text" class="form-control" name="medico_recibe"></div>
                 
                 <div class="mb-4">
                     <label class="form-label fw-bold text-cruz">Firma del Médico Receptor</label>
@@ -1241,6 +1247,8 @@
 
         calcularGlasgow();
         calcularApgar();
+        actualizarDestinoTraslado();
+        if (datos['jefe_manual']) { document.getElementById('jefeManual').style.display = 'block'; document.getElementById('btnJefeManual').innerHTML = '<i class="bi bi-x-lg"></i> Usar el de mi perfil'; }
         // Recalcular PAMs al cargar borrador
         document.querySelectorAll('.signo-fila').forEach(row => {
             let tasInput = row.querySelector('.pam-tas');
@@ -1300,6 +1308,20 @@
         else if (destinoFirmaActual === 'paramedico') { padParamedico.fromDataURL(imagenFinalB64); document.getElementById('base64_firma_paramedico').value = imagenFinalB64; }
         bootstrap.Modal.getInstance(document.getElementById('modalFirmaFullscreen')).hide();
         autoGuardarFantasma(); // Guardamos el borrador cada vez que se firme
+    }
+
+    function alternarJefeManual() {
+        const i = document.getElementById('jefeManual'), b = document.getElementById('btnJefeManual');
+        const ver = i.style.display === 'none';
+        i.style.display = ver ? 'block' : 'none';
+        if (ver) { i.focus(); b.innerHTML = '<i class="bi bi-x-lg"></i> Usar el de mi perfil'; }
+        else { i.value = ''; b.innerHTML = '<i class="bi bi-pencil"></i> Poner manualmente'; autoGuardarFantasma(); }
+    }
+    function actualizarDestinoTraslado() {
+        const dom = document.getElementById('resolucionFinal').value === 'Traslado a Domicilio';
+        document.getElementById('bloqueHospital').style.display = dom ? 'none' : 'block';
+        document.getElementById('bloqueDomicilio').style.display = dom ? 'block' : 'none';
+        document.getElementById('lblQuienRecibe').textContent = dom ? 'Persona que Recibe' : 'Médico que Recibe';
     }
 
     function toggleRcp() { document.getElementById('moduloRcp').style.display = document.getElementById('switchRcp').checked ? 'block' : 'none'; }
